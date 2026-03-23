@@ -1,0 +1,35 @@
+SELECT 
+        logs.hpercode,
+        CONCAT(
+            p.patlast, ', ',
+            p.patfirst,
+            CASE
+                WHEN p.patsuffix IS NULL OR p.patsuffix IN ('NOTAP','N/A') THEN ''
+                ELSE CONCAT(' ', p.patsuffix)
+            END,
+            CASE
+                WHEN p.patmiddle IS NULL OR p.patmiddle IN ('','N/A') THEN ''
+                ELSE CONCAT(', ', p.patmiddle)
+            END
+        ) AS patient,
+        p.patbdate AS birthdate,
+        logs.encounter,
+        logs.encounter_date,
+        logs.discharge_date,
+        logs.discharge_by
+    FROM (
+        SELECT hpercode, 'ADMISSION' AS encounter, admdate AS encounter_date, disdate AS discharge_date, discharge_by 
+        FROM hadmlog
+
+        UNION ALL
+
+        SELECT hpercode, 'EMERGENCY' AS encounter, erdate AS encounter_date, erdtedis AS discharge_date, discharge_by
+        FROM herlog
+
+        UNION ALL
+
+        SELECT hpercode, 'OUTPATIENT' AS encounter, opddate AS encounter_date, opddtedis AS discharge_date, discharge_by
+        FROM hopdlog
+    ) AS logs
+    JOIN hperson p 
+        ON logs.hpercode = p.hpercode;";

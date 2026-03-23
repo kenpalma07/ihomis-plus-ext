@@ -1,0 +1,221 @@
+SELECT
+    `hdocord`.`docointkey` as `intkey`,
+    `hdocord`.`hpercode`,
+    CONCAT (
+        hperson.patlast,
+        ', ',
+        `hperson`.`patfirst`,
+        CASE
+            WHEN hperson.patsuffix IS NULL
+            OR hperson.patsuffix = 'NOTAP'
+            OR hperson.patsuffix = 'N/A' THEN ''
+            ELSE CONCAT (' ', hperson.patsuffix)
+        END,
+        CASE
+            WHEN hperson.patmiddle IS NULL
+            OR hperson.patmiddle = ''
+            OR hperson.patmiddle = 'N/A' THEN ''
+            ELSE CONCAT (', ', hperson.patmiddle)
+        END
+    ) AS patient,
+    `hprocm`.`procdesc`,
+    (
+                CASE
+                        WHEN henctr.toecode = 'ADM' THEN (
+                                select
+                                        CONCAT (
+                                                (hward.wardname),
+                                                SPACE (3),
+                                                (hroom.rmname),
+                                                SPACE (3),
+                                                (hbed.bdname)
+                                        )
+                                from
+                                        hpatroom r
+                                        inner join hadmlog on hadmlog.enccode = r.enccode
+                                        inner join hward on r.wardcode = hward.wardcode
+                                        inner join hroom on r.rmintkey = hroom.rmintkey
+                                        inner join hbed on r.bdintkey = hbed.bdintkey
+                                where
+                                        r.enccode = hdocord.enccode
+                                        and r.hprdate = (
+                                                select
+                                                        max(a.hprdate)
+                                                from
+                                                        hpatroom a
+                                                where
+                                                        a.enccode = hdocord.enccode
+                                        )
+                        )
+                        WHEN henctr.toecode = 'OPD' THEN 'OUTPATIENT'
+                        WHEN henctr.toecode = 'ER' THEN 'EMERGENCY'
+                        WHEN henctr.toecode = 'ERADM' THEN 'EMERGENCY->ADMISSION'
+                        WHEN henctr.toecode = 'OPADM' THEN 'OUTPATIENT->ADMISSION'
+                END
+        ) as room,
+    DATE_FORMAT (hdocord.dodate, '%m/%d/%Y %r') as `request_date`,
+    DATE_FORMAT (hdocord.charged_date, '%m/%d/%Y %r') as `charged_date`,
+    CONCAT(
+    FLOOR(TIMESTAMPDIFF(SECOND, hdocord.dodate, hdocord.charged_date) / 86400),
+    ' days - ',
+    SEC_TO_TIME(
+        MOD(
+            TIMESTAMPDIFF(SECOND, hdocord.dodate, hdocord.charged_date),
+            86400
+        )
+    )
+) AS turnaround_dhms,
+    CASE
+            WHEN hdocord.estatus = 'U' THEN 'Unserved'
+            WHEN hdocord.estatus = 'P' THEN 'Pending'
+            WHEN hdocord.estatus = 'S' THEN 'Served'
+            ELSE 'Unknown'
+        END AS estatus,
+    CASE
+            WHEN henctr.encstat = 'A' THEN 'Active'
+            WHEN henctr.encstat = 'I' THEN 'Inactive'
+            ELSE 'Unknown'
+        END AS encounter_status,
+        `hdocord`.`ordcon`,
+    `hdocord`.`remarks`,
+    `hdocord`.`enccode`,
+    `hdocord`.`pcchrgcod`,
+    `hdocord`.`dostat`,
+    `hdocord`.`dopriority`
+FROM
+    `hdocord`
+    LEFT JOIN `hproc` ON `hproc`.`prikey` = `hdocord`.`prikey`
+    LEFT JOIN `hprocm` ON `hprocm`.`proccode` = `hproc`.`proccode`
+    LEFT JOIN `henctr` ON `henctr`.`enccode` = `hdocord`.`enccode`
+    LEFT JOIN `hperson` ON `hperson`.`hpercode` = `hdocord`.`hpercode`
+WHERE
+    (`hdocord`.`estatus` IN ('U', 'P', 'S'))
+    AND (`hdocord`.`ordcon` != 'CANOR')
+    AND `hdocord`.`dostat` = 'A'
+    AND TRIM(`henctr`.`encstat`) IN ('A', 'I')
+    AND `hprocm`.`costcenter` = 'LABOR'
+ORDER BY
+    `hdocord`.`dodate` DESC
+
+
+
+    <script>
+    $(document).ready(function() {
+        var table = $('#inventoryTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: "Controllers/PharmacyController.php",
+                type: "POST",
+                data: function(d) {
+                    d.action = "inventory";
+                    d.startDate = $('#start_date').val();
+                    d.endDate = $('#end_date').val();
+                },
+                dataSrc: function(json) {
+                    if (json.totals) {
+                        $('#totalStock').text(json.totals.totalStock ?? 0);
+                        $('#totalValue').text(
+                            parseFloat(json.totals.totalValue ?? 0)
+                            .toLocaleString(undefined, {
+                                minimumFractionDigits: 2
+                            })
+                        );
+                        $('#expiredStock').text(json.totals.expiredStock ?? 0);
+                        $('#expiredValue').text(
+                            parseFloat(json.totals.expiredValue ?? 0)
+                            .toLocaleString(undefined, {
+                                minimumFractionDigits: 2
+                            })
+                        );
+                    }
+                    return json.data;
+                }
+            },
+            pageLength: 10,
+            lengthMenu: [
+                [5, 10, 15, 50, 100, -1],
+                [5, 10, 15, 50, 100, "All"]
+            ],
+            scrollX: true,
+            dom: "<'row px-md-1 mb-2'<'col-md-2'l><'col-md-4'B><'col-md-6'f>>" +
+                "<'row'<'col-12'tr>>" +
+                "<'row px-md-4'<'col-md-5'i><'col-md-7'p>>",
+            buttons: [{
+                    extend: 'excelHtml5',
+                    text: 'Excel',
+                    className: 'btn btn-success btn-sm',
+                    title: 'Laboratory Report',
+                    exportOptions: {
+                        columns: ':visible' // export only visible columns
+                    }
+                },
+                {
+                    extend: 'csvHtml5',
+                    text: 'CSV',
+                    className: 'btn btn-primary btn-sm',
+                    title: 'Laboratory Report'
+                },
+                {
+                    extend: 'print',
+                    text: 'Print',
+                    className: 'btn btn-secondary btn-sm',
+                    title: 'Laboratory Report'
+                }
+            ],
+            columns: [{
+                    data: 'drug_description'
+                },
+                {
+                    data: 'stock_balance'
+                },
+                {
+                    data: 'selling_price'
+                },
+                {
+                    data: 'entry_date'
+                },
+                {
+                    data: 'expiration_date'
+                },
+                {
+                    data: 'account_type'
+                },
+                {
+                    data: 'status'
+                },
+                {
+                    data: "id",
+                    render: function(data, type, row) {
+                        return `
+                            <button class="btn btn-danger btn-sm pulloutBtn"
+                                data-id="${data}"
+                                data-drug="${row.drug_description}">
+                                Pull Out
+                            </button>
+                        `;
+                    }
+                }
+            ],
+            createdRow: function(row, data) {
+                if (data.status === "EXPIRED") {
+                    $(row).addClass('table-danger');
+                } else if (data.status === "NEAR EXPIRE") {
+                    $(row).addClass('table-warning');
+                }
+            }
+        });
+        $('#filterBtn').click(function() {
+            table.ajax.reload();
+        });
+        $('#resetBtn').click(function() {
+            $('#start_date').val('');
+            $('#end_date').val('');
+            table.ajax.reload();
+        });
+        $('#exportBtn').click(function() {
+            // Use DataTables buttons extension
+            table.button('.buttons-excel').trigger();
+        });
+    });
+</script>

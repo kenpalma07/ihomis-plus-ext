@@ -1,0 +1,93 @@
+SELECT
+    CONCAT_WS(' ',
+        CONCAT_WS('', g.GENDESC,
+            CASE
+                WHEN h.brandname IS NULL OR h.brandname = ''
+                THEN ''
+                ELSE CONCAT(' (', h.brandname, ')')
+            END
+        ),
+        COALESCE(h.dmdnost,''),
+        COALESCE(h.strecode,''),
+        COALESCE(h.formcode,'')
+    ) AS drug_description,
+		p.hpercode AS hpercode,
+    CONCAT(
+        p.patlast, ', ',
+        p.patfirst,
+        CASE
+            WHEN p.patsuffix IS NULL OR p.patsuffix IN ('NOTAP','N/A') THEN ''
+            ELSE CONCAT(' ', p.patsuffix)
+        END,
+        CASE
+            WHEN p.patmiddle IS NULL OR p.patmiddle IN ('','N/A') THEN ''
+            ELSE CONCAT(', ', p.patmiddle)
+        END
+    ) AS patient,
+
+    SUM(i.qty) AS quantity_issued,
+
+    IFNULL(SUM(r.qty),0) AS quantity_returned,
+
+    CASE
+        WHEN rx.status = 'R' THEN 'Prescription Only'
+        ELSE 'Order'
+    END AS order_type,
+
+    CONCAT(
+        hp.lastname, ', ',
+        hp.firstname,
+        CASE
+            WHEN hp.middlename IS NULL OR hp.middlename = ''
+            THEN ''
+            ELSE CONCAT(' ', hp.middlename)
+        END
+    ) AS issued_by,
+
+    i.issuedte AS date_issued,
+    i.lotno AS lot_number
+
+FROM hrxoissue i
+
+LEFT JOIN hrxoreturn r
+    ON i.docointkey = r.docointkey
+    AND i.dmdcomb = r.dmdcomb
+    AND i.dmdctr = r.dmdctr
+
+LEFT JOIN hdmhdr h
+    ON i.dmdcomb = h.dmdcomb
+
+LEFT JOIN hdruggrp dg
+    ON h.grpcode = dg.grpcode
+
+LEFT JOIN hgen g
+    ON dg.gencode = g.gencode
+
+LEFT JOIN hrxissue rx
+    ON i.dmdcomb = rx.dmdcomb
+    AND i.dmdctr = rx.dmdctr
+    AND i.lotno = rx.lotno
+
+LEFT JOIN hperson p
+    ON i.hpercode = p.hpercode
+
+LEFT JOIN hpersonal hp
+    ON hp.employeeid = COALESCE(rx.issuedby, i.issuedby)
+
+GROUP BY
+    g.GENDESC,
+    h.brandname,
+    h.dmdnost,
+    h.strecode,
+    h.formcode,
+    p.hpercode,
+    p.patlast,
+    p.patfirst,
+    p.patsuffix,
+    p.patmiddle,
+    rx.status,
+    hp.lastname,
+    hp.firstname,
+    hp.middlename,
+    i.issuedte,
+    i.lotno;

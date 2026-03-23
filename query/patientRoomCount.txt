@@ -1,0 +1,18 @@
+SELECT hadmlog.enccode, hadmlog.hpercode,
+(SELECT COUNT(hpatroom.enccode) FROM hpatroom 
+WHERE hpatroom.enccode = hadmlog.enccode)  AS room_count
+FROM hadmlog 
+INNER JOIN hdocord ON hdocord.enccode = hadmlog.enccode
+LEFT JOIN `hproc` ON `hproc`.`prikey`=`hdocord`.`prikey`
+LEFT JOIN `hprocm` ON `hprocm`.`proccode` = `hproc`.`proccode`
+WHERE 1=1
+AND (`hdocord`.`estatus` IN('U', 'P')
+ )
+AND   (
+`hdocord`.`ordcon` != 'CANOR'
+ )
+AND `hdocord`.`dostat` = 'A'
+ AND `hadmlog`.`admstat` = 'A'
+AND `hprocm`.`costcenter` = 'LABOR'
+-- and disdate IS NULL
+HAVING room_count > 1;

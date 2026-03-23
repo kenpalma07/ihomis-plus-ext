@@ -1,0 +1,32 @@
+SELECT 
+        logs.hpercode,
+        CONCAT(
+            p.patlast, ', ',
+            p.patfirst,
+            CASE
+                WHEN p.patsuffix IS NULL OR p.patsuffix IN ('NOTAP','N/A') THEN ''
+                ELSE CONCAT(' ', p.patsuffix)
+            END,
+            CASE
+                WHEN p.patmiddle IS NULL OR p.patmiddle IN ('','N/A') THEN ''
+                ELSE CONCAT(', ', p.patmiddle)
+            END
+        ) AS patient,
+        p.patbdate AS birthdate,
+        logs.erdate AS registration_date,
+        logs.erdtedis AS discharged_date,
+        CONCAT(
+            FLOOR(TIMESTAMPDIFF(SECOND, logs.erdate, logs.erdtedis) / 86400),
+            'days - ',
+            SEC_TO_TIME(
+                MOD(
+                    TIMESTAMPDIFF(SECOND, logs.erdate, logs.erdtedis),
+                    86400
+                )
+            )
+        ) AS turnaround_dhms,
+        logs.discharge_by
+
+        FROM herlog AS logs
+    JOIN hperson p 
+        ON logs.hpercode = p.hpercode;
