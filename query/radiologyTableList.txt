@@ -1,0 +1,79 @@
+SELECT
+        `hdocord`.`docointkey` as `intkey`,
+        DATE_FORMAT (hdocord.dodate, '%m/%d/%Y %r') as date,
+        DATE_FORMAT (hdocord.charged_date, '%m/%d/%Y %r') as `charged_date`,
+        CONCAT (
+                hperson.patlast,
+                ', ',
+                `hperson`.`patfirst`,
+                CASE
+                        WHEN hperson.patsuffix IS NULL
+                        OR hperson.patsuffix = 'NOTAP'
+                        OR hperson.patsuffix = ''
+                        OR hperson.patsuffix = 'N/A' THEN ''
+                        ELSE CONCAT (' ', hperson.patsuffix)
+                END,
+                CASE
+                        WHEN hperson.patmiddle IS NULL
+                        OR hperson.patmiddle = ''
+                        OR hperson.patmiddle = 'N/A' THEN ''
+                        ELSE CONCAT (', ', hperson.patmiddle)
+                END
+        ) AS patient,
+        (
+                CASE
+                        WHEN henctr.toecode = 'ADM' THEN (
+                                select
+                                        CONCAT (
+                                                (hward.wardname),
+                                                SPACE (3),
+                                                (hroom.rmname),
+                                                SPACE (3),
+                                                (hbed.bdname)
+                                        )
+                                from
+                                        hpatroom r
+                                        inner join hadmlog on hadmlog.enccode = r.enccode
+                                        inner join hward on r.wardcode = hward.wardcode
+                                        inner join hroom on r.rmintkey = hroom.rmintkey
+                                        inner join hbed on r.bdintkey = hbed.bdintkey
+                                where
+                                        r.enccode = hdocord.enccode
+                                        and r.hprdate = (
+                                                select
+                                                        max(a.hprdate)
+                                                from
+                                                        hpatroom a
+                                                where
+                                                        a.enccode = hdocord.enccode
+                                        )
+                        )
+                        WHEN henctr.toecode = 'OPD' THEN 'OUTPATIENT'
+                        WHEN henctr.toecode = 'ER' THEN 'EMERGENCY'
+                        WHEN henctr.toecode = 'ERADM' THEN 'EMERGENCY->ADMISSION'
+                        WHEN henctr.toecode = 'OPADM' THEN 'OUTPATIENT->ADMISSION'
+                END
+        ) as room,
+        `hdocord`.`remarks`,
+        `hdocord`.`enccode`,
+        `hdocord`.`hpercode`,
+        `hdocord`.`pcchrgcod`,
+        `hprocm`.`procdesc`,
+        `hdocord`.`dopriority`,
+        `hdocord`.`estatus`,
+        `hdocord`.`ordcon`,
+        `hperson`.`patlast`
+FROM
+        `hdocord`
+        LEFT JOIN `hproc` ON `hproc`.`prikey` = `hdocord`.`prikey`
+        LEFT JOIN `hprocm` ON `hprocm`.`proccode` = `hproc`.`proccode`
+        LEFT JOIN `henctr` ON `henctr`.`enccode` = `hdocord`.`enccode`
+        LEFT JOIN `hperson` ON `hperson`.`hpercode` = `hdocord`.`hpercode`
+WHERE
+        (`hdocord`.`estatus` IN ('U', 'P'))
+        AND (`hdocord`.`ordcon` != 'CANOR')
+        AND `hdocord`.`dostat` = 'A'
+        AND `henctr`.`encstat` = 'I'
+        AND `hprocm`.`costcenter` = 'RADIO'
+ORDER BY
+        `hdocord`.`dodate` DESC

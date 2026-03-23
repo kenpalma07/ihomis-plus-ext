@@ -1,0 +1,489 @@
+<?php
+require '../db.php';
+
+$action = $_POST['action'] ?? $_GET['action'] ?? '';
+switch ($action) {
+    case 'inventory':
+        loadInventory($pdo);
+        break;
+    case 'issued':
+        loadIssued($pdo);
+        break;
+    case 'pullout':
+        pullOutDrug($pdo);
+        break;
+    default:
+        echo json_encode([
+            "error" => "Invalid action"
+        ]);
+        break;
+}
+
+function loadInventory($pdo)
+{
+    try {
+
+        /* =========================
+           DATATABLES PARAMS
+        ========================= */
+        $draw   = $_POST['draw'] ?? 1;
+        $start  = $_POST['start'] ?? 0;
+        $length = $_POST['length'] ?? 10;
+
+        $search = $_POST['search']['value'] ?? '';
+
+        $startDate = $_POST['startDate'] ?? '';
+        $endDate   = $_POST['endDate'] ?? '';
+
+        /* =========================
+           WHERE CONDITIONS
+        ========================= */
+        $where = "WHERE 1=1
+            AND hp.lotno IS NOT NULL AND hp.lotno != ''
+            AND hp.stockbal IS NOT NULL AND hp.stockbal > 0
+            AND hp.expiry IS NOT NULL
+        ";
+        $params = [];
+
+        // DATE FILTER (optimized)
+        if (!empty($startDate) && !empty($endDate)) {
+            $where .= " AND hp.dmdprdte BETWEEN :startDate AND :endDate";
+            $params[':startDate'] = $startDate . " 00:00:00";
+            $params[':endDate']   = $endDate . " 23:59:59";
+        }
+
+        // SEARCH
+        if (!empty($search)) {
+            $where .= " AND (
+                hp.lotno LIKE :search
+                OR g.GENDESC LIKE :search
+                OR h.brandname LIKE :search
+                OR h.dmdnost LIKE :search
+                OR h.strecode LIKE :search
+                OR h.formcode LIKE :search
+                OR hp.stockbal LIKE :search
+                OR hp.dmselprice LIKE :search
+                OR hp.dmdprdte LIKE :search
+                OR hp.expiry LIKE :search
+                OR hp.dmhdrsub LIKE :search
+
+                OR (
+                    CASE
+                        WHEN hp.expiry < CURDATE() AND hp.isActive = 'N' THEN 'EXPIRED/PULLOUT'
+                        WHEN hp.expiry < CURDATE() AND hp.isActive = 'Y' THEN 'EXPIRED'
+                        WHEN hp.expiry >= CURDATE() AND hp.isActive = 'N' THEN 'PULLOUT'
+                        WHEN hp.expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'NEAR EXPIRE'
+                        ELSE 'GOOD'
+                    END
+                ) LIKE :search
+            )";
+            $params[':search'] = "%$search%";
+        }
+
+        /* =========================
+           BASE FROM + JOIN
+        ========================= */
+        $baseFrom = "
+            FROM hdmhdrprice hp
+
+            LEFT JOIN hdmhdr h
+                ON hp.dmdcomb = h.dmdcomb
+                AND hp.dmdctr = h.dmdctr
+
+            LEFT JOIN hdruggrp dg
+                ON h.grpcode = dg.grpcode
+
+            LEFT JOIN hgen g
+                ON dg.gencode = g.gencode
+        ";
+
+        /* =========================
+           TOTAL RECORDS
+        ========================= */
+        $countSql = "SELECT COUNT(*) $baseFrom $where";
+        $countStmt = $pdo->prepare($countSql);
+        $countStmt->execute($params);
+        $total = $countStmt->fetchColumn();
+
+        /* =========================
+           MAIN DATA QUERY
+        ========================= */
+        $sql = "
+            SELECT
+                COALESCE(NULLIF(hp.lotno, ''), 'No Lot Number') AS lot_number,
+                CONCAT_WS(' ',
+                    CONCAT_WS('', g.GENDESC,
+                        CASE
+                            WHEN h.brandname IS NULL OR h.brandname = ''
+                            THEN ''
+                            ELSE CONCAT(' (', h.brandname, ')')
+                        END
+                    ),
+                    COALESCE(h.dmdnost, ''),
+                    COALESCE(h.strecode, ''),
+                    COALESCE(h.formcode, '')
+                ) AS drug_description,
+                COALESCE(NULLIF(hp.stockbal, ''), 'No Stock Balance') AS stock_balance,
+                hp.dmselprice AS selling_price,
+                hp.dmdprdte AS entry_date,
+                COALESCE(NULLIF(hp.expiry, ''), 'No Expiration Date') AS expiration_date,
+                hp.dmhdrsub AS account_type,
+
+                CASE
+                    WHEN hp.expiry < CURDATE() AND hp.isActive = 'N' THEN 'EXPIRED/PULLOUT'
+                    WHEN hp.expiry < CURDATE() AND hp.isActive = 'Y' THEN 'EXPIRED'
+                    WHEN hp.expiry >= CURDATE() AND hp.isActive = 'N' THEN 'PULLOUT'
+                    WHEN hp.expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'NEAR EXPIRE'
+                    ELSE 'GOOD'
+                END AS status,
+
+                CASE
+                    WHEN hp.expiry < CURDATE() AND hp.isActive = 'Y' THEN 0
+                    WHEN hp.expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1
+                    WHEN hp.expiry < CURDATE() AND hp.isActive = 'N' THEN 4
+                    WHEN hp.expiry >= CURDATE() AND hp.isActive = 'N' THEN 3
+                    ELSE 2
+                END AS trigger_order,
+
+                hp.delintkey AS id
+
+            $baseFrom
+            $where
+            ORDER BY trigger_order ASC, hp.expiry ASC
+        ";
+
+        // LIMIT
+        if ($length != -1) {
+            $sql .= " LIMIT :start, :length";
+        }
+
+        $stmt = $pdo->prepare($sql);
+
+        // Bind params
+        foreach ($params as $k => $v) {
+            $stmt->bindValue($k, $v);
+        }
+
+        if ($length != -1) {
+            $stmt->bindValue(':start', (int)$start, PDO::PARAM_INT);
+            $stmt->bindValue(':length', (int)$length, PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        /* =========================
+           TOTALS QUERY
+        ========================= */
+        $totalSql = "
+            SELECT
+                SUM(CASE WHEN hp.expiry >= CURDATE()
+                    THEN hp.stockbal ELSE 0 END) AS totalStock,
+
+                SUM(CASE WHEN hp.expiry >= CURDATE()
+                    THEN hp.stockbal * hp.dmselprice ELSE 0 END) AS totalValue,
+
+                SUM(CASE WHEN hp.expiry < CURDATE()
+                    THEN hp.stockbal ELSE 0 END) AS expiredStock,
+
+                SUM(CASE WHEN hp.expiry < CURDATE()
+                    THEN hp.stockbal * hp.dmselprice ELSE 0 END) AS expiredValue
+
+            $baseFrom
+            $where
+        ";
+
+        $totalStmt = $pdo->prepare($totalSql);
+        $totalStmt->execute($params);
+        $totals = $totalStmt->fetch(PDO::FETCH_ASSOC);
+
+        /* =========================
+           FINAL JSON RESPONSE
+        ========================= */
+        echo json_encode([
+            "draw" => intval($draw),
+            "recordsTotal" => intval($total),
+            "recordsFiltered" => intval($total),
+            "data" => $data,
+            "totals" => $totals
+        ]);
+    } catch (Exception $e) {
+
+        // VERY IMPORTANT: prevents DataTables crash
+        echo json_encode([
+            "draw" => 0,
+            "recordsTotal" => 0,
+            "recordsFiltered" => 0,
+            "data" => [],
+            "error" => $e->getMessage()
+        ]);
+    }
+
+    exit;
+}
+
+function loadIssued($pdo)
+{
+    try {
+
+        /* =========================
+           DATATABLES PARAMS
+        ========================= */
+        $draw   = $_POST['draw'] ?? 1;
+        $start  = $_POST['start'] ?? 0;
+        $length = $_POST['length'] ?? 10;
+        
+
+        $startDate = $_POST['startDate'] ?? '';
+        $endDate   = $_POST['endDate'] ?? '';
+        $search    = $_POST['search']['value'] ?? '';
+
+        /* =========================
+           WHERE CONDITIONS
+        ========================= */
+        $where = "WHERE 1=1";
+        $params = [];
+
+        // ✅ DATE FILTER
+        if (!empty($startDate) && !empty($endDate)) {
+            $where .= " AND i.issuedte BETWEEN :startDate AND :endDate";
+            $params[':startDate'] = $startDate . " 00:00:00";
+            $params[':endDate']   = $endDate . " 23:59:59";
+        }
+
+        // ✅ SEARCH FILTER (FULL LIKE INVENTORY)
+        if (!empty($search)) {
+            $where .= " AND (
+            -- Drug description
+            g.GENDESC LIKE :search
+            OR h.brandname LIKE :search
+            OR h.dmdnost LIKE :search
+            OR h.strecode LIKE :search
+            OR h.formcode LIKE :search
+
+            -- Patient info
+            OR p.hpercode LIKE :search
+            OR p.patlast LIKE :search
+            OR p.patfirst LIKE :search
+            OR p.patmiddle LIKE :search
+
+            -- Full patient name
+            OR CONCAT(
+                p.patlast, ', ',
+                p.patfirst,
+                CASE
+                    WHEN p.patsuffix IS NULL OR p.patsuffix IN ('NOTAP','N/A') THEN ''
+                    ELSE CONCAT(' ', p.patsuffix)
+                END,
+                CASE
+                    WHEN p.patmiddle IS NULL OR p.patmiddle IN ('','N/A') THEN ''
+                    ELSE CONCAT(', ', p.patmiddle)
+                END
+            ) LIKE :search
+
+            -- Quantities
+            OR i.qty LIKE :search
+            OR IFNULL(r.qty_returned,0) LIKE :search
+
+            -- Order type
+            OR (
+                CASE
+                    WHEN rx.status = 'R' THEN 'Prescription Only'
+                    ELSE 'Order'
+                END
+            ) LIKE :search
+
+            -- Issued by
+            OR CONCAT(
+                hp.lastname, ', ',
+                hp.firstname,
+                CASE
+                    WHEN hp.middlename IS NULL OR hp.middlename = ''
+                    THEN ''
+                    ELSE CONCAT(' ', hp.middlename)
+                END
+            ) LIKE :search
+
+            -- Date + lot
+            OR i.issuedte LIKE :search
+            OR i.lotno LIKE :search
+        )";
+
+            $params[':search'] = "%$search%";
+        }
+
+        /* =========================
+           BASE FROM (REUSABLE)
+        ========================= */
+        $baseFrom = "
+            FROM hrxoissue i
+
+            LEFT JOIN (
+                SELECT docointkey, dmdcomb, dmdctr, SUM(qty) AS qty_returned
+                FROM hrxoreturn
+                GROUP BY docointkey,dmdcomb,dmdctr
+            ) r
+                ON i.docointkey = r.docointkey
+                AND i.dmdcomb = r.dmdcomb
+                AND i.dmdctr = r.dmdctr
+
+            LEFT JOIN hdmhdr h ON i.dmdcomb = h.dmdcomb
+            LEFT JOIN hdruggrp dg ON h.grpcode = dg.grpcode
+            LEFT JOIN hgen g ON dg.gencode = g.gencode
+
+            LEFT JOIN hrxissue rx
+                ON i.dmdcomb = rx.dmdcomb
+                AND i.dmdctr = rx.dmdctr
+                AND i.lotno = rx.lotno
+
+            LEFT JOIN hperson p ON i.hpercode = p.hpercode
+            LEFT JOIN hpersonal hp ON hp.employeeid = COALESCE(rx.issuedby, i.issuedby)
+        ";
+
+        /* =========================
+           TOTAL COUNT (FILTERED)
+        ========================= */
+        $countSql = "SELECT COUNT(*) $baseFrom $where";
+        $countStmt = $pdo->prepare($countSql);
+        $countStmt->execute($params);
+        $total = $countStmt->fetchColumn();
+
+        /* =========================
+           MAIN DATA QUERY
+        ========================= */
+        $sql = "
+            SELECT
+                CONCAT_WS(' ',
+                    CONCAT_WS('', g.GENDESC,
+                        CASE
+                            WHEN h.brandname IS NULL OR h.brandname = ''
+                            THEN ''
+                            ELSE CONCAT(' (', h.brandname, ')')
+                        END
+                    ),
+                    COALESCE(h.dmdnost,''),
+                    COALESCE(h.strecode,''),
+                    COALESCE(h.formcode,'')
+                ) AS drug_description,
+
+                p.hpercode,
+
+                CONCAT(
+                    p.patlast, ', ',
+                    p.patfirst,
+                    CASE
+                        WHEN p.patsuffix IS NULL OR p.patsuffix IN ('NOTAP','N/A') THEN ''
+                        ELSE CONCAT(' ', p.patsuffix)
+                    END,
+                    CASE
+                        WHEN p.patmiddle IS NULL OR p.patmiddle IN ('','N/A') THEN ''
+                        ELSE CONCAT(', ', p.patmiddle)
+                    END
+                ) AS patient,
+
+                i.qty AS quantity_issued,
+                IFNULL(r.qty_returned,0) AS quantity_returned,
+
+                CASE
+                    WHEN rx.status = 'R' THEN 'Prescription Only'
+                    ELSE 'Order'
+                END AS order_type,
+
+                CONCAT(
+                    hp.lastname, ', ',
+                    hp.firstname,
+                    CASE
+                        WHEN hp.middlename IS NULL OR hp.middlename = ''
+                        THEN ''
+                        ELSE CONCAT(' ', hp.middlename)
+                    END
+                ) AS issued_by,
+
+                i.issuedte AS date_issued,
+                i.lotno AS lot_number
+
+            $baseFrom
+            $where
+            ORDER BY i.issuedte DESC
+        ";
+
+        // LIMIT
+        if ($length != -1) {
+            $sql .= " LIMIT :start, :length";
+        }
+
+        $stmt = $pdo->prepare($sql);
+
+        foreach ($params as $k => $v) {
+            $stmt->bindValue($k, $v);
+        }
+
+        if ($length != -1) {
+            $stmt->bindValue(':start', (int)$start, PDO::PARAM_INT);
+            $stmt->bindValue(':length', (int)$length, PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        /* =========================
+           TOTALS (FILTERED)
+        ========================= */
+        $totalSql = "
+            SELECT
+                COUNT(*) AS totalDrugs,
+                SUM(i.qty) AS totalIssued,
+                SUM(IFNULL(r.qty_returned,0)) AS totalReturned
+            $baseFrom
+            $where
+        ";
+
+        $totalStmt = $pdo->prepare($totalSql);
+        $totalStmt->execute($params);
+        $totals = $totalStmt->fetch(PDO::FETCH_ASSOC);
+
+        /* =========================
+           RESPONSE
+        ========================= */
+        echo json_encode([
+            "draw" => intval($draw),
+            "recordsTotal" => intval($total),
+            "recordsFiltered" => intval($total),
+            "data" => $data,
+            "totals" => $totals
+        ]);
+    } catch (Exception $e) {
+        echo json_encode([
+            "draw" => 0,
+            "recordsTotal" => 0,
+            "recordsFiltered" => 0,
+            "data" => [],
+            "error" => $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
+function pullOutDrug($pdo)
+{
+    $id = $_POST['id'] ?? '';
+
+    if (!$id) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "Invalid ID"
+        ]);
+        return;
+    }
+
+    $sql = "UPDATE hdmhdrprice 
+            SET isActive = 'N'
+            WHERE delintkey = :id";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([':id' => $id]);
+
+    echo json_encode([
+        "status" => "success"
+    ]);
+}

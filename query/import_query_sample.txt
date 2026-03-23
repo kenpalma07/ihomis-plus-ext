@@ -1,0 +1,59 @@
+LOAD DATA LOCAL INFILE 'C:/Users/KC-PALMA/Downloads/personnel.csv'
+INTO TABLE hpersonal
+FIELDS TERMINATED BY ','
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n'
+IGNORE 1 LINES
+(
+    employeeid,
+    lastname,
+    firstname,
+    middlename,
+    maidenname,
+    updsw,
+    datemod,
+    emplock,
+    empstat,
+    postitle,
+    paddr,
+    empsuffix,
+    empprefix,
+    tin,
+    deptcode,
+    entryby,
+    @provbdate,
+    provsex,
+    contactno,
+    extensionname,
+    mobilenumber,
+    emailadd,
+    @dateemployed,
+    @dateresigned,
+    section,
+    deleted_at,
+    created_at
+)
+SET
+    -- Convert dates or set NULL
+    provbdate    = NULLIF(STR_TO_DATE(@provbdate, '%m/%d/%Y'), ''),
+    dateemployed = NULLIF(STR_TO_DATE(@dateemployed, '%m/%d/%Y'), ''),
+    dateresigned = NULLIF(STR_TO_DATE(@dateresigned, '%m/%d/%Y'), ''),
+
+    -- Convert text "NULL" to real NULL
+    middlename    = NULLIF(middlename, 'NULL'),
+    maidenname    = NULLIF(maidenname, 'NULL'),
+    postitle      = NULLIF(postitle, 'NULL'),
+    paddr         = NULLIF(paddr, 'NULL'),
+    empsuffix     = NULLIF(empsuffix, 'NULL'),
+    empprefix     = NULLIF(empprefix, 'NULL'),
+    tin           = NULLIF(tin, 'NULL'),
+    deptcode      = NULLIF(deptcode, 'NULL'),
+    entryby       = NULLIF(entryby, 'NULL'),
+    contactno     = NULLIF(contactno, 'NULL'),
+    extensionname = NULLIF(extensionname, 'NULL'),
+    mobilenumber  = NULLIF(mobilenumber, 'NULL'),
+    emailadd      = NULLIF(emailadd, 'NULL'),
+    section       = NULLIF(section, 'NULL'),
+
+    deleted_at = NULL,
+    created_at = COALESCE(created_at, CURRENT_TIMESTAMP);
