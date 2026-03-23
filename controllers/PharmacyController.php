@@ -93,6 +93,8 @@ function loadInventory($pdo)
                 ON hp.dmdcomb = h.dmdcomb
                 AND hp.dmdctr = h.dmdctr
 
+            LEFT JOIN hcharge chg ON hp.dmhdrsub = chg.chrgcode
+
             LEFT JOIN hdruggrp dg
                 ON h.grpcode = dg.grpcode
 
@@ -130,7 +132,7 @@ function loadInventory($pdo)
                 hp.dmselprice AS selling_price,
                 hp.dmdprdte AS entry_date,
                 COALESCE(NULLIF(hp.expiry, ''), 'No Expiration Date') AS expiration_date,
-                hp.dmhdrsub AS account_type,
+                chg.chrgdesc AS account_type,
 
                 CASE
                     WHEN hp.expiry < CURDATE() AND hp.isActive = 'N' THEN 'EXPIRED/PULLOUT'

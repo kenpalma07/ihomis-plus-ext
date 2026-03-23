@@ -59,3 +59,35 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
         </div>
     </div>
 </div>
+
+<div class="px-md-3">
+    <div class="row g-2 align-items-end mb-3">
+        <div class="col-md-3">
+            <label class="form-label"><b>Entry Date From</b></label>
+            <input type="date" id="inventoryStart" class="form-control"
+                value="<?= htmlspecialchars($startDate) ?>">
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label"><b>Entry Date To</b></label>
+            <input type="date" id="inventoryEnd" class="form-control"
+                value="<?= htmlspecialchars($endDate) ?>">
+        </div>
+
+        <div class="col-md-3 d-flex align-items-end">
+            <button id="filterBtn" class="btn btn-primary w-100">
+                <i class="bi bi-funnel"></i> Filter
+            </button>
+
+            <button type="button" id="resetInventory" class="btn btn-secondary">
+                Reset
+            </button>
+        </div>
+
+        <div class="col-md-3 d-flex align-items-end">
+            <a href="#" id="exportInventoryExcel" class="btn btn-success w-100">
+                <i class="bi bi-file-earmark-excel"></i> Export all to Excel
+            </a>
+        </div>
+    </div>
+</div>
