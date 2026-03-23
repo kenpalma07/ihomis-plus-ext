@@ -45,11 +45,14 @@ function loadInventory($pdo)
         ";
         $params = [];
 
-        // DATE FILTER (optimized)
-        if (!empty($startDate) && !empty($endDate)) {
-            $where .= " AND hp.dmdprdte BETWEEN :startDate AND :endDate";
+        // DATE FILTER (works if only start or end is provided)
+        if (!empty($startDate)) {
+            $where .= " AND hp.dmdprdte >= :startDate";
             $params[':startDate'] = $startDate . " 00:00:00";
-            $params[':endDate']   = $endDate . " 23:59:59";
+        }
+        if (!empty($endDate)) {
+            $where .= " AND hp.dmdprdte <= :endDate";
+            $params[':endDate'] = $endDate . " 23:59:59";
         }
 
         // SEARCH
@@ -232,7 +235,7 @@ function loadIssued($pdo)
         $draw   = $_POST['draw'] ?? 1;
         $start  = $_POST['start'] ?? 0;
         $length = $_POST['length'] ?? 10;
-        
+
 
         $startDate = $_POST['startDate'] ?? '';
         $endDate   = $_POST['endDate'] ?? '';
@@ -330,6 +333,8 @@ function loadIssued($pdo)
             LEFT JOIN hdmhdr h ON i.dmdcomb = h.dmdcomb
             LEFT JOIN hdruggrp dg ON h.grpcode = dg.grpcode
             LEFT JOIN hgen g ON dg.gencode = g.gencode
+            
+            LEFT JOIN hcharge chg ON i.chrgcode = chg.chrgcode
 
             LEFT JOIN hrxissue rx
                 ON i.dmdcomb = rx.dmdcomb
@@ -353,6 +358,7 @@ function loadIssued($pdo)
         ========================= */
         $sql = "
             SELECT
+                i.lotno AS lot_number,
                 CONCAT_WS(' ',
                     CONCAT_WS('', g.GENDESC,
                         CASE
@@ -388,6 +394,8 @@ function loadIssued($pdo)
                     WHEN rx.status = 'R' THEN 'Prescription Only'
                     ELSE 'Order'
                 END AS order_type,
+
+                chg.chrgdesc AS account_type,
 
                 CONCAT(
                     hp.lastname, ', ',

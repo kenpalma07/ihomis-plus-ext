@@ -8,6 +8,7 @@ $routes = [
     'inventoryDrugsMeds'       => 'modules/Pharmacy/inventoryDrugsMeds.php',
     'issuedDrugsMeds'          => 'modules/Pharmacy/issuedDrugsMeds.php',
     //'exportIssuedDrugs'        => 'modules/Pharmacy/export_issued_drugs.php',
+    'inventorySupplies'       => 'modules/CentralSupply/inventorySupplies.php',
     'viewDashboard'            => 'modules/Medical_Records/viewDashboard.php',
     'admissionLog'             => 'modules/Medical_Records/admissionLog.php',
     'viewAdmissionLog'         => 'modules/Medical_Records/viewAdmissionLog.php'

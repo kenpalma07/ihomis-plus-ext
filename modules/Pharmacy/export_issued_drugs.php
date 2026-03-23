@@ -10,18 +10,52 @@ header("Content-Disposition: attachment; filename=issued_drugs_report.xls");
 header("Pragma: no-cache");
 header("Expires: 0");
 
-echo "<table border='1'>";
+$startDate = $_GET['startDate'] ?? '';
+$endDate   = $_GET['endDate'] ?? '';
+$search    = $_GET['search'] ?? '';
 
-echo "<tr>
-<th>Drug/Medicine</th>
-<th>HPERCODE</th>
-<th>Patient</th>
-<th>Issued Qty</th>
-<th>Returned Qty</th>
-<th>Order Type</th>
-<th>Issued By</th>
-<th>Date Issued</th>
-</tr>";
+$where = "WHERE 1=1";
+
+$params = [];
+
+if (!empty($startDate) && !empty($endDate)) {
+    $where .= " AND i.issuedte BETWEEN :startDate AND :endDate";
+    $params[':startDate'] = $startDate . " 00:00:00";
+    $params[':endDate']   = $endDate . " 23:59:59";
+}
+
+if (!empty($search)) {
+    $where .= " AND (
+        i.lotno LIKE :search
+        OR CONCAT_WS(' ',
+            CONCAT_WS('', g.GENDESC,
+                CASE
+                    WHEN h.brandname IS NULL OR h.brandname = ''
+                    THEN ''
+                    ELSE CONCAT(' (', h.brandname, ')')
+                END
+            ),
+            COALESCE(h.dmdnost,''),
+            COALESCE(h.strecode,''),
+            COALESCE(h.formcode,'')
+        ) LIKE :search
+        OR CONCAT(
+            p.patlast, ', ',
+            p.patfirst,
+            CASE
+                WHEN p.patsuffix IS NULL OR p.patsuffix IN ('NOTAP','N/A') THEN ''
+                ELSE CONCAT(' ', p.patsuffix)
+            END,
+            CASE
+                WHEN p.patmiddle IS NULL OR p.patmiddle IN ('','N/A') THEN ''
+                ELSE CONCAT(', ', p.patmiddle)
+            END
+        ) LIKE :search
+    )";
+    $params[':search'] = "%$search%";
+}
+
+
 
 $sql = "
 SELECT
@@ -109,13 +143,30 @@ LEFT JOIN hperson p
 
 LEFT JOIN hpersonal hp
     ON hp.employeeid = COALESCE(rx.issuedby, i.issuedby)
+
+$where
 	 
 ORDER BY drug_description ASC";
 
-$stmt = $pdo->query($sql);
+$stmt = $pdo->prepare($sql);
+foreach ($params as $k => $v) {
+    $stmt->bindValue($k, $v);
+}
+$stmt->execute();
+
+echo "<table border='1'>
+<tr>
+<th>Drug/Medicine</th>
+<th>HPERCODE</th>
+<th>Patient</th>
+<th>Issued Qty</th>
+<th>Returned Qty</th>
+<th>Order Type</th>
+<th>Issued By</th>
+<th>Date Issued</th>
+</tr>";
 
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-
     echo "<tr>";
     echo "<td>" . $row['drug_description'] . "</td>";
     echo "<td style='mso-number-format:\"\\@\";'>" . $row['hpercode'] . "</td>";
@@ -124,7 +175,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     echo "<td>" . $row['quantity_returned'] . "</td>";
     echo "<td>" . $row['order_type'] . "</td>";
     echo "<td>" . $row['issued_by'] . "</td>";
-    echo "<td>" . $row['date_issued'] . "</td>";
+    echo "<td>" . date('Y-m-d H:i', strtotime($row['date_issued'])) . "</td>";
     echo "</tr>";
 }
 

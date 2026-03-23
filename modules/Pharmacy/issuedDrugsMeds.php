@@ -1,7 +1,7 @@
 <?php
 $pageTitle = "Issued Drugs and Medicine Report";
 
-$startDate = $_GET['start_date'] ?? date('Y-01-01');
+$startDate = $_GET['start_date'] ?? date('Y-m-d');
 $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 ?>
 
@@ -53,24 +53,25 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
     <form id="filterForm" class="row g-2 align-items-end">
         <div class="col-md-3">
             <label class="form-label"><b>Date Issued From</b></label>
-            <input type="date" id="start_date" class="form-control" value="<?= $startDate ?>">
+            <input type="date" id="issuedStart" class="form-control"
+                value="<?= htmlspecialchars($startDate) ?>">
         </div>
 
         <div class="col-md-3">
             <label class="form-label"><b>Date Issued To</b></label>
-            <input type="date" id="end_date" class="form-control" value="<?= $endDate ?>">
+            <input type="date" id="issuedEnd" class="form-control" value="<?= htmlspecialchars($endDate) ?>">
         </div>
 
         <div class="col-md-3">
-            <button type="button" id="filterBtn" class="btn btn-primary">
+            <button type="button" id="filterIssued" class="btn btn-primary">
                 Filter
             </button>
-            <button type="button" id="resetBtn" class="btn btn-secondary">
+            <button type="button" id="resetIssued" class="btn btn-secondary">
                 Reset
             </button>
         </div>
         <div class="col-md-3 d-flex align-items-end">
-            <a href="modules/Pharmacy/export_issued_drugs.php" class="btn btn-success w-100">
+            <a href="#" id="exportIssuedExcel" class="btn btn-success w-100">
                 <i class="bi bi-file-earmark-excel"></i> Export all to Excel
             </a>
         </div>
@@ -82,12 +83,14 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
         <table id="issuedDMTable" class="table table-striped table-bordered nowrap px-md-1" style="width:100%">
             <thead class="table-success">
                 <tr>
+                    <th>LOT NUMBER</th>
                     <th>DRUG/MEDICINE</th>
                     <th>HPERCODE</th>
                     <th>PATIENT</th>
                     <th>ISSUED</th>
                     <th>RETURNED</th>
-                    <th>ORDER TYPE </th>
+                    <th>ORDER</th>
+                    <th>ACCOUNT</th>
                     <th>ISSUED BY</th>
                     <th>DATE ISSUED</th>
                 </tr>

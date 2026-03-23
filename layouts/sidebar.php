@@ -11,6 +11,10 @@ $inventoryDrugsMeds = ($currentPage == 'inventoryDrugsMeds');
 $issuedDrugsMeds = ($currentPage == 'issuedDrugsMeds');
 $issuedDrugsSupplies = ($currentPage == 'issuedDrugsSupplies');
 
+$suppliesPages = ['inventorySupplies'];
+$isCentralSupplyOpen = in_array($currentPage, $suppliesPages);
+$inventorySupplies = ($currentPage == 'inventorySupplies');
+
 $medicalRecordPages = ['admissionLog', 'viewAdmissionLog', 'viewDashboard'];
 $isMedicalRecordsOpen = in_array($currentPage, $medicalRecordPages);
 $activeAdmission = in_array($currentPage, ['admissionLog', 'viewAdmissionLog']);
@@ -134,7 +138,28 @@ $viewDashboard = ($currentPage == 'viewDashboard');
                         <li class="nav-item">
                             <a class="nav-link text-white <?= $issuedDrugsSupplies ? 'active' : '' ?>"
                                 href="index.php?page=issuedDrugsSupplies">
-                                Issued Drugs and Supplies
+                                Issued Non-Drugs and Supplies (Pharmacy)
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
+            <!-- CENTRAL SUPPLY -->
+            <li class="nav-item">
+                <a class="nav-link text-white d-flex justify-content-between align-items-center"
+                    data-bs-toggle="collapse"
+                    href="#centralSupplySubmenu"
+                    aria-expanded="<?= $inventorySupplies ? 'true' : 'false' ?>">
+                    <span>Central Supply</span>
+                    <i class="bi bi-chevron-down small"></i>
+                </a>
+                <div class="collapse ps-3 <?= $inventorySupplies ? 'show' : '' ?>" id="centralSupplySubmenu">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link text-white <?= $inventorySupplies ? 'active' : '' ?>"
+                                href="index.php?page=inventorySupplies">
+                                Inventory of Supplies
                             </a>
                         </li>
                     </ul>

@@ -1,8 +1,8 @@
 <?php
 $pageTitle = "Drugs & Medicine Inventory";
 
-$startDate = $_GET['start_date'] ?? '';
-$endDate   = $_GET['end_date'] ?? '';
+$startDate = $_GET['start_date'] ?? date('Y-m-d');
+$endDate   = $_GET['end_date'] ?? date('Y-m-d');
 ?>
 
 <nav class="navbar navbar-light bg-success sticky-top flex-md-nowrap p-2 shadow">
@@ -66,28 +66,28 @@ $endDate   = $_GET['end_date'] ?? '';
     <form id="filterForm" class="row g-2 align-items-end">
         <div class="col-md-3">
             <label class="form-label"><b>Entry Date From</b></label>
-            <input type="date" id="start_date" class="form-control"
+            <input type="date" id="inventoryStart" class="form-control"
                 value="<?= htmlspecialchars($startDate) ?>">
         </div>
 
         <div class="col-md-3">
             <label class="form-label"><b>Entry Date To</b></label>
-            <input type="date" id="end_date" class="form-control"
+            <input type="date" id="inventoryEnd" class="form-control"
                 value="<?= htmlspecialchars($endDate) ?>">
         </div>
 
         <div class="col-md-3">
-            <button type="button" id="filterBtn" class="btn btn-primary">
+            <button type="button" id="filterInventory" class="btn btn-primary">
                 Filter
             </button>
 
-            <button type="button" id="resetBtn" class="btn btn-secondary">
+            <button type="button" id="resetInventory" class="btn btn-secondary">
                 Reset
             </button>
         </div>
 
         <div class="col-md-3 d-flex align-items-end">
-            <a href="modules/Pharmacy/export_inventory.php" class="btn btn-success w-100">
+            <a href="#" id="exportInventoryExcel" class="btn btn-success w-100">
                 <i class="bi bi-file-earmark-excel"></i> Export all to Excel
             </a>
         </div>

@@ -551,8 +551,8 @@
                     type: "POST",
                     data: function(d) {
                         d.action = "issued";
-                        d.startDate = $('#start_date').val();
-                        d.endDate = $('#end_date').val();
+                        d.startDate = $('#issuedStart').val();
+                        d.endDate = $('#issuedEnd').val();
                     },
                     dataSrc: function(json) {
 
@@ -569,7 +569,7 @@
                 ],
                 scrollX: true,
                 order: [
-                    [7, 'desc']
+                    [9, 'desc']
                 ],
                 language: {
                     processing: "Loading..."
@@ -593,6 +593,9 @@
                     }
                 ],
                 columns: [{
+                        data: 'lot_number'
+                    },
+                    {
                         data: 'drug_description'
                     },
                     {
@@ -611,6 +614,9 @@
                         data: 'order_type'
                     },
                     {
+                        data: 'account_type'
+                    },
+                    {
                         data: 'issued_by'
                     },
                     {
@@ -619,18 +625,19 @@
                 ]
             });
         }
-        $('#filterBtn').click(function() {
+        $('#filterIssued').click(function() {
             table.ajax.reload();
         });
-        $('#resetBtn').click(function() {
-            $('#start_date').val('<?= $startDate ?>');
-            $('#end_date').val('<?= $endDate ?>');
+        $('#resetIssued').click(function() {
+            $('#issuedStart').val('<?= $startDate ?>');
+            $('#issuedEnd').val('<?= $endDate ?>');
             table.ajax.reload();
         });
-        $('#exportBtn').click(function(e) {
+
+        $('#exportIssuedExcel').click(function(e) {
             e.preventDefault();
-            let startDate = $('#start_date').val();
-            let endDate = $('#end_date').val();
+            let startDate = $('#issuedStart').val();
+            let endDate = $('#issuedEnd').val();
             let url = "modules/Pharmacy/export_issued_drugs.php" +
                 "?startDate=" + startDate +
                 "&endDate=" + endDate;
@@ -650,8 +657,8 @@
                 type: "POST",
                 data: function(d) {
                     d.action = "inventory";
-                    d.startDate = $('#start_date').val();
-                    d.endDate = $('#end_date').val();
+                    d.startDate = $('#inventoryStart').val() || null;
+                    d.endDate = $('#inventoryEnd').val() || null;
                 },
                 dataSrc: function(json) {
                     if (json.totals) {
@@ -755,18 +762,26 @@
         });
 
         // Filter & Reset
-        $('#filterBtn').click(function() {
+        $('#filterInventory').click(function() {
             table.ajax.reload();
         });
-        $('#resetBtn').click(function() {
-            $('#start_date').val('');
-            $('#end_date').val('');
-            table.ajax.reload();
+        $('#resetInventory').click(function() {
+            $('#inventoryStart,#inventoryEnd').val('');
+            inventoryTable.ajax.reload();
         });
 
-        // Export button
-        $('#exportBtn').click(function() {
-            table.button('.buttons-excel').trigger();
+        $('#exportInventoryExcel').click(function(e) {
+            e.preventDefault();
+
+            let startDate = $('#inventoryStart').val();
+            let endDate = $('#inventoryEnd').val();
+            let search = $('.dataTables_filter input').val(); // get global search
+
+            let url = "modules/Pharmacy/export_inventory.php?startDate=" + encodeURIComponent(startDate) +
+                "&endDate=" + encodeURIComponent(endDate) +
+                "&search=" + encodeURIComponent(search);
+
+            window.location.href = url;
         });
 
         // Pull Out modal
