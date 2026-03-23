@@ -1,4 +1,5 @@
 <?php
+require __DIR__ . '/../../db.php';
 $startDate = $_GET['start_date'] ?? date('Y-01-01');
 $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 
@@ -58,31 +59,17 @@ SELECT
 FROM hadmlog
 WHERE admdate BETWEEN '$startDate' AND '$endDate';
 ";
-?>
 
-<?php
-$pdo = new PDO("mysql:host=localhost;dbname=hospital_dbo", "root", "root");
-$stmt = $pdo->prepare($sql);
-
-$params = [
-    $startDate,
-    $endDate,   // total_discharges
-    $startDate,
-    $endDate,   // new_patients
-    $startDate,
-    $endDate,   // old_patients
-    $startDate,
-    $endDate,   // readmitted_patients subquery
-    $startDate,
-    $endDate,   // readmitted_patients subquery for ROUND
-    $startDate,
-    $endDate,   // ROUND denominator SUM
-    $startDate,
-    $endDate    // main WHERE admdate
-];
-
-$stmt->execute($params);
-$stats = $stmt->fetch(PDO::FETCH_ASSOC);
+try {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        ':start' => $startDate,
+        ':end'   => $endDate
+    ]);
+    $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    die("Query failed: " . $e->getMessage());
+}
 ?>
 
 <?php
