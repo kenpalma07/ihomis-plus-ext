@@ -39,7 +39,9 @@ function loadInventory($pdo)
            WHERE CONDITIONS
         ========================= */
         $where = "WHERE 1=1
-            
+            AND hp.lotno IS NOT NULL AND hp.lotno != ''
+            AND hp.stockbal IS NOT NULL AND hp.stockbal > 0
+            AND hp.expiry IS NOT NULL
         ";
         $params = [];
 
