@@ -24,10 +24,10 @@ $search    = $_GET['search'] ?? '';
    WHERE CONDITIONS
 ========================= */
 $where = "WHERE 1=1
-    AND hp.lotno IS NOT NULL AND hp.lotno != ''
-    AND hp.stockbal IS NOT NULL AND hp.stockbal > 0
-    AND hp.expiry IS NOT NULL
-";
+            AND hp.lotno IS NOT NULL AND hp.lotno != ''
+            AND hp.isActive IS NOT NULL AND hp.isActive != 'N'
+            AND hp.stock_status IS NOT NULL AND hp.stock_status != 'N'
+            ";
 
 $params = [];
 
@@ -87,6 +87,8 @@ SELECT
     ) AS drug_description,
 
     COALESCE(NULLIF(hp.stockbal, ''), 'No Stock Balance') AS stock_balance,
+    hp.begbal AS beg_balance,
+    (hp.begbal - hp.stockbal) AS total_dispensed,
     hp.dmselprice AS selling_price,
     hp.dmdprdte AS entry_date,
     COALESCE(NULLIF(hp.expiry, ''), 'No Expiration Date') AS expiration_date,
@@ -137,6 +139,8 @@ echo "<tr>
     <th>Lot Number</th>
     <th>Drug/Medicine</th>
     <th>Stock Balance</th>
+    <th>Beginning Balance</th>
+    <th>Total Dispensed</th>
     <th>Selling Price</th>
     <th>Entry Date</th>
     <th>Expiration Date</th>
@@ -150,6 +154,8 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     echo "<td style='mso-number-format:\"\\@\";'>" . $row['lot_number'] . "</td>";
     echo "<td>" . $row['drug_description'] . "</td>";
     echo "<td>" . $row['stock_balance'] . "</td>";
+    echo "<td>" . $row['beg_balance'] . "</td>";
+    echo "<td>" . $row['total_dispensed'] . "</td>";
     echo "<td>" . $row['selling_price'] . "</td>";
     echo "<td>" . $row['entry_date'] . "</td>";
     echo "<td>" . $row['expiration_date'] . "</td>";

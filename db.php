@@ -1,5 +1,5 @@
 <?php
-$host = '127.0.0.1';
+$host = '192.168.1.205';
 $db   = 'hospital_dbo'; // Updated database name
 $user = 'root';
 $pass = 'root'; // Laragon default

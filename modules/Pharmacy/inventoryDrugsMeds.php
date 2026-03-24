@@ -1,8 +1,8 @@
 <?php
 $pageTitle = "Drugs & Medicine Inventory";
 
-$startDate = $_GET['start_date'] ?? date('Y-m-d');
-$endDate   = $_GET['end_date'] ?? date('Y-m-d');
+$startDate = $_GET['startDate'] ?? date('Y-m-d');
+$endDate   = $_GET['endDate'] ?? date('Y-m-d');
 ?>
 
 <nav class="navbar navbar-light bg-success sticky-top flex-md-nowrap p-2 shadow">
@@ -107,6 +107,8 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
                     <th>LOT NUMBER</th>
                     <th>DRUG / MEDICINE</th>
                     <th>STOCK BALANCE</th>
+                    <th>BEGINNING BALANCE</th>
+                    <th>TOTAL DISPENSED</th>
                     <th>SELLING PRICE</th>
                     <th>ENTRY DATE</th>
                     <th>EXPIRY DATE</th>

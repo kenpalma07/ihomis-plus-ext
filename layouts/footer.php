@@ -724,6 +724,12 @@
                     data: 'stock_balance'
                 },
                 {
+                    data: 'beg_balance'
+                },
+                {
+                    data: 'total_dispensed'
+                },
+                {
                     data: 'selling_price'
                 },
                 {

@@ -40,7 +40,8 @@ function loadInventory($pdo)
         ========================= */
         $where = "WHERE 1=1
             AND hp.lotno IS NOT NULL AND hp.lotno != ''
-            AND hp.expiry IS NOT NULL
+            AND hp.isActive IS NOT NULL AND hp.isActive != 'N'
+            AND hp.stock_status IS NOT NULL AND hp.stock_status != 'N'
         ";
         $params = [];
 
@@ -63,10 +64,10 @@ function loadInventory($pdo)
                 OR h.dmdnost LIKE :search
                 OR h.strecode LIKE :search
                 OR h.formcode LIKE :search
-                OR hp.stockbal LIKE :search
-                OR hp.dmselprice LIKE :search
-                OR hp.dmdprdte LIKE :search
-                OR hp.expiry LIKE :search
+                OR CAST(hp.stockbal AS CHAR) LIKE :search
+                OR CAST(hp.dmselprice AS CHAR) LIKE :search
+                OR DATE(hp.dmdprdte) LIKE :search
+                OR DATE(hp.expiry) LIKE :search
                 OR hp.dmhdrsub LIKE :search
 
                 OR (
@@ -128,6 +129,8 @@ function loadInventory($pdo)
                     COALESCE(h.formcode, '')
                 ) AS drug_description,
                 COALESCE(NULLIF(hp.stockbal, ''), 'No Stock Balance') AS stock_balance,
+                hp.begbal AS beg_balance,
+                (hp.begbal - hp.stockbal) AS total_dispensed,
                 hp.dmselprice AS selling_price,
                 hp.dmdprdte AS entry_date,
                 COALESCE(NULLIF(hp.expiry, ''), 'No Expiration Date') AS expiration_date,
