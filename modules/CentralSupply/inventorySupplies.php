@@ -60,8 +60,8 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
     </div>
 </div>
 
-<div class="px-md-3">
-    <div class="row g-2 align-items-end mb-3">
+<div class="px-md-3 mb-3">
+    <form id="filterForm" class="row g-2 align-items-end">
         <div class="col-md-3">
             <label class="form-label"><b>Entry Date From</b></label>
             <input type="date" id="inventoryStart" class="form-control"
@@ -70,16 +70,16 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 
         <div class="col-md-3">
             <label class="form-label"><b>Entry Date To</b></label>
-            <input type="date" id="inventoryEnd" class="form-control"
+            <input type="date" id="inventorySupplyEnd" class="form-control"
                 value="<?= htmlspecialchars($endDate) ?>">
         </div>
 
-        <div class="col-md-3 d-flex align-items-end">
-            <button id="filterBtn" class="btn btn-primary w-100">
-                <i class="bi bi-funnel"></i> Filter
+        <div class="col-md-3">
+            <button type="button" id="filterSupplyInventory" class="btn btn-primary">
+                Filter
             </button>
 
-            <button type="button" id="resetInventory" class="btn btn-secondary">
+            <button type="button" id="resetSupplyInventory" class="btn btn-secondary">
                 Reset
             </button>
         </div>
@@ -89,5 +89,26 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
                 <i class="bi bi-file-earmark-excel"></i> Export all to Excel
             </a>
         </div>
+    </form>
+</div>
+
+<div class="px-md-1">
+    <div class="table-container">
+        <table id="inventorySuppliesTable" class="table table-striped table-bordered nowrap" style="width:100%">
+            <thead>
+                <tr>
+                    <th>LOT NUMBER</th>
+                    <th>SUPPLY</th>
+                    <th>STOCK BALANCE</th>
+                    <th>SELLING PRICE</th>
+                    <th>ENTRY DATE</th>
+                    <th>EXPIRY DATE</th>
+                    <th>ACCOUNT TYPE</th>
+                    <th>STATUS</th>
+                    <th>ACTION</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 </div>

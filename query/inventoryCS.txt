@@ -1,0 +1,48 @@
+SELECT
+    COALESCE(NULLIF(hc2.itemcode, ''), 'No Lot Number') AS lot_number,
+
+    CONCAT_WS(' ', h2.cl2desc, h2.uomcode) AS supply_name,
+
+    CASE 
+        WHEN hc2.stockbal IS NULL OR hc2.stockbal = 0 THEN 'No Stock Balance'
+        ELSE hc2.stockbal
+    END AS stock_balance,
+
+    hc2.cl2retprc AS selling_price,
+    hc2.cl2dteas AS entry_date,
+    hc2.expiry AS expiry_date,
+    chg.chrgdesc AS account_type,
+
+    CASE
+        WHEN hc2.expiry < CURDATE() AND hc2.isActive = 'N' THEN 'EXPIRED/PULLOUT'
+        WHEN hc2.expiry < CURDATE() AND hc2.isActive = 'Y' THEN 'EXPIRED'
+        WHEN hc2.expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'NEAR EXPIRE'
+        WHEN hc2.expiry >= CURDATE() AND hc2.isActive = 'N' THEN 'PULLOUT'
+        ELSE 'GOOD'
+    END AS STATUS,
+
+    CASE
+        WHEN hc2.expiry < CURDATE() AND hc2.isActive = 'Y' THEN 0
+        WHEN hc2.expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1
+        WHEN hc2.expiry >= CURDATE() AND hc2.isActive = 'N' THEN 3
+        WHEN hc2.expiry < CURDATE() AND hc2.isActive = 'N' THEN 4
+        ELSE 2
+    END AS trigger_order,
+
+    hc2.stockloc AS cost_center
+
+FROM hclass2h hc2
+
+LEFT JOIN hclass2 h2
+    ON h2.cl2comb = hc2.cl2comb
+
+LEFT JOIN hcharge chg 
+    ON hc2.hclass2sub = chg.chrgcode
+
+WHERE 1=1
+AND hc2.itemcode IS NOT NULL AND hc2.itemcode != ''
+AND hc2.stockbal IS NOT NULL AND hc2.stockbal > 0
+AND hc2.expiry IS NOT NULL
+AND hc2.stockloc IN ('CSSR', 'CSR')
+
+ORDER BY trigger_order ASC, hc2.expiry ASC;

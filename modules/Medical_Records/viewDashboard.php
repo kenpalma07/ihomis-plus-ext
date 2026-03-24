@@ -94,7 +94,7 @@ $dashboardStats = [
 
 <div class="px-md-3">
     <div class="alert alert-info alert-compact-left" role="alert">
-        <p class="alert-heading"><b>NOTE:</b> This dashboard provides an overview of patient admissions, discharges, and readmissions within the selected date range. Use the date filters to customize the data displayed.</p>
+        <p class="alert-heading"><b>NOTE:</b> This dashboard provides an overview of patient admissions, discharges, and readmissions within the selected date range. Use the date filters to customize the data displayed.<b style="color: red;"> NOTE: THIS ONLY RECORDS NUMBER OF PATIENT'S ADMISSION</b></p>
     </div>
 </div>
 
