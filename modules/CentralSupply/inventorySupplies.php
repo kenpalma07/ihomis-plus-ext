@@ -1,7 +1,7 @@
 <?php
 $pageTitle = "Central Supply Inventory";
 
-$startDate = $_GET['start_date'] ?? date('Y-m-d');
+$startDate = $_GET['start_date'] ?? date('1969-m-d');
 $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 ?>
 
@@ -64,7 +64,7 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
     <form id="filterForm" class="row g-2 align-items-end">
         <div class="col-md-3">
             <label class="form-label"><b>Entry Date From</b></label>
-            <input type="date" id="inventoryStart" class="form-control"
+            <input type="date" id="inventorySupplyStart" class="form-control"
                 value="<?= htmlspecialchars($startDate) ?>">
         </div>
 
@@ -95,7 +95,7 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 <div class="px-md-1">
     <div class="table-container">
         <table id="inventorySuppliesTable" class="table table-striped table-bordered nowrap" style="width:100%">
-            <thead>
+            <thead class="table-success">
                 <tr>
                     <th>LOT NUMBER</th>
                     <th>SUPPLY</th>
@@ -103,6 +103,7 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
                     <th>SELLING PRICE</th>
                     <th>ENTRY DATE</th>
                     <th>EXPIRY DATE</th>
+                    <th>DATE MODIFIED</th>
                     <th>ACCOUNT TYPE</th>
                     <th>STATUS</th>
                     <th>ACTION</th>

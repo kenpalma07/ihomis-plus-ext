@@ -1,7 +1,7 @@
 <?php
 $pageTitle = "Drugs & Medicine Inventory";
 
-$startDate = $_GET['startDate'] ?? date('Y-m-d');
+$startDate = $_GET['startDate'] ?? date('Y-01-01');
 $endDate   = $_GET['endDate'] ?? date('Y-m-d');
 ?>
 
@@ -22,11 +22,11 @@ $endDate   = $_GET['endDate'] ?? date('Y-m-d');
 
 <div class="px-md-3">
     <div class="alert alert-info alert-compact-left" role="alert">
-        <p class="alert-heading"><b>NOTE:</b> This masterlist includes all drugs and medicines in the inventory. Use the search box to filter by <b>HPERCODE</b>, <b>Drug/Medicine Name</b>, or <b>Lot Number</b>. <b class="text-danger">EXPIRED STOCK IS NOT INCLUDED IN THE TOTAL STOCK.</b></p>
+        <p class="alert-heading"><b>NOTE:</b> This masterlist includes all <b class="text-danger">PULLED OUT DRUGS AND MEDICINES</b> in the inventory either EXPIRED OR FORCE PULLED OUT. Use the search box to filter by <b>HPERCODE</b>, <b>Drug/Medicine Name</b>, or <b>Lot Number</b>.</p>
     </div>
 </div>
 
-<h6 class="px-md-3 text-muted">INVENTORY DRUGS AND MEDICINES</h6>
+<h6 class="px-md-3 text-muted">PULLED OUT DRUGS AND MEDICINES</h6>
 
 <div class="px-md-3">
     <div class="row mb-1">
@@ -66,28 +66,28 @@ $endDate   = $_GET['endDate'] ?? date('Y-m-d');
     <form id="filterForm" class="row g-2 align-items-end">
         <div class="col-md-3">
             <label class="form-label"><b>Entry Date From</b></label>
-            <input type="date" id="inventoryStart" class="form-control"
+            <input type="date" id="pulledoutStart" class="form-control"
                 value="<?= htmlspecialchars($startDate) ?>">
         </div>
 
         <div class="col-md-3">
             <label class="form-label"><b>Entry Date To</b></label>
-            <input type="date" id="inventoryEnd" class="form-control"
+            <input type="date" id="pulledoutEnd" class="form-control"
                 value="<?= htmlspecialchars($endDate) ?>">
         </div>
 
         <div class="col-md-3">
-            <button type="button" id="filterInventory" class="btn btn-primary">
+            <button type="button" id="filterPulledOut" class="btn btn-primary">
                 Filter
             </button>
 
-            <button type="button" id="resetInventory" class="btn btn-secondary">
+            <button type="button" id="resetPulledOut" class="btn btn-secondary">
                 Reset
             </button>
         </div>
 
         <div class="col-md-3 d-flex align-items-end">
-            <a href="#" id="exportInventoryExcel" class="btn btn-success w-100">
+            <a href="#" id="exportPulledOutExcel" class="btn btn-success w-100">
                 <i class="bi bi-file-earmark-excel"></i> Export all to Excel
             </a>
         </div>
@@ -97,8 +97,7 @@ $endDate   = $_GET['endDate'] ?? date('Y-m-d');
 
 <div class="px-md-1">
     <div class="table-container">
-
-        <table id="inventoryTable"
+        <table id="pulledoutDMTable"
             class="table table-striped table-bordered nowrap"
             style="width:100%">
 
@@ -114,6 +113,7 @@ $endDate   = $_GET['endDate'] ?? date('Y-m-d');
                     <th>EXPIRY DATE</th>
                     <th>ACCOUNT TYPE</th>
                     <th>STATUS</th>
+                    <th>REMARKS</th>
                     <th>ACTION</th>
                 </tr>
             </thead>
@@ -121,44 +121,50 @@ $endDate   = $_GET['endDate'] ?? date('Y-m-d');
             <tbody></tbody>
 
         </table>
-
     </div>
 </div>
 
 <!-- Pull Out Modal -->
-<div class="modal fade" id="pullOutModal" tabindex="-1">
+<div class="modal fade" id="undoPullOutModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
 
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title">Confirm Pull Out</h5>
+                <h5 class="modal-title">Confirm Undo Pull Out</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
             <div class="modal-body text-center">
+
                 <p><strong>Drug / Medicine:</strong></p>
                 <p id="modalDrug" class="fw-bold"></p>
                 <div class="mb-3 text-start">
                     <label class="form-label"><b>Reason / Remarks</b></label>
-                    <textarea id="pulledOutRemarks" class="form-control" rows="3"
-                        placeholder="Enter reason for pulling out..." required></textarea>
+                    <textarea id="undoRemarks" class="form-control" rows="3"
+                        placeholder="Enter reason for undoing pull out..." required></textarea>
                 </div>
+
                 <hr>
+
                 <p class="text-danger fw-bold">
-                    Are you sure you want to pull out this item?
+                    Are you sure you want to undo pull out this item?
                 </p>
+
             </div>
 
             <div class="modal-footer justify-content-center">
+
                 <button class="btn btn-secondary"
                     data-bs-dismiss="modal">
                     Cancel
                 </button>
 
-                <form method="POST" action="pullout.php">
+                <form method="POST" action="#">
+
                     <input type="hidden" name="drug" id="confirmDrug">
-                    <button id="confirmPullOut" class="btn btn-danger">
-                        Yes Pull Out
+
+                    <button id="confirmUndoPullOut" class="btn btn-danger">
+                        Yes Undo Pull Out
                     </button>
 
                 </form>

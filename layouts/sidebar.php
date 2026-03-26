@@ -5,11 +5,12 @@ $isEmergencyOpen = ($currentPage == 'emergency');
 $isLaboratoryOpen = ($currentPage == 'laboratory');
 $isRadiologyOpen = ($currentPage == 'radiology');
 
-$pharmacyPages = ['issuedDrugsMeds', 'issuedDrugsSupplies', 'inventoryDrugsMeds'];
+$pharmacyPages = ['issuedDrugsMeds', 'issuedDrugsSupplies', 'inventoryDrugsMeds', 'pulledoutDrugsMeds'];
 $isPharmacyOpen = in_array($currentPage, $pharmacyPages);
 $inventoryDrugsMeds = ($currentPage == 'inventoryDrugsMeds');
 $issuedDrugsMeds = ($currentPage == 'issuedDrugsMeds');
 $issuedDrugsSupplies = ($currentPage == 'issuedDrugsSupplies');
+$pulledoutDrugsMeds = ($currentPage == 'pulledoutDrugsMeds');
 
 $suppliesPages = ['inventorySupplies'];
 $isCentralSupplyOpen = in_array($currentPage, $suppliesPages);
@@ -133,6 +134,11 @@ $viewDashboard = ($currentPage == 'viewDashboard');
                             <a class="nav-link text-white <?= $issuedDrugsMeds ? 'active' : '' ?>"
                                 href="index.php?page=issuedDrugsMeds">
                                 Issued Drugs and Medicines
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white <?= $pulledoutDrugsMeds ? 'active' : '' ?>" href="index.php?page=pulledoutDrugsMeds">
+                                Pulled Out Drugs and Medicines
                             </a>
                         </li>
                         <li class="nav-item">

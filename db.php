@@ -1,6 +1,6 @@
 <?php
-$host = '192.168.1.205';
-$db   = 'hospital_dbo'; // Updated database name
+$host = '127.0.0.1';
+$db   = 'simc_hospital_dbo'; // Updated database name
 $user = 'root';
 $pass = 'root'; // Laragon default
 $charset = 'utf8mb4';

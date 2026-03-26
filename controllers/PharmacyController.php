@@ -12,6 +12,12 @@ switch ($action) {
     case 'pullout':
         pullOutDrug($pdo);
         break;
+    case 'pulledOut':
+        pulledOutDM($pdo);
+        break;
+    case 'undoPullOut':
+        undoPullOutDrug($pdo);
+        break;
     default:
         echo json_encode([
             "error" => "Invalid action"
@@ -479,6 +485,7 @@ function loadIssued($pdo)
 function pullOutDrug($pdo)
 {
     $id = $_POST['id'] ?? '';
+    $remarks = $_POST['remarks'] ?? '';
 
     if (!$id) {
         echo json_encode([
@@ -488,14 +495,271 @@ function pullOutDrug($pdo)
         return;
     }
 
+    if (empty($remarks)) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "Remarks is required"
+        ]);
+        return;
+    }
+
     $sql = "UPDATE hdmhdrprice 
-            SET isActive = 'N'
+            SET isActive = 'N',
+                dmdrem = :remarks
             WHERE delintkey = :id";
 
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([':id' => $id]);
+    $stmt->execute([
+        ':id' => $id,
+        ':remarks' => $remarks
+    ]);
 
     echo json_encode([
         "status" => "success"
     ]);
+}
+
+function undoPullOutDrug($pdo)
+{
+    $id = $_POST['id'] ?? '';
+    $remarks = $_POST['remarks'] ?? '';
+
+    if (!$id) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "Invalid ID"
+        ]);
+        return;
+    }
+
+    if (empty($remarks)) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "Remarks is required"
+        ]);
+        return;
+    }
+
+    $sql = "UPDATE hdmhdrprice 
+            SET isActive = 'Y',
+                stock_status = 'Y',
+                dmdrem = :remarks
+            WHERE delintkey = :id";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        ':id' => $id,
+        ':remarks' => $remarks
+    ]);
+
+    echo json_encode([
+        "status" => "success"
+    ]);
+}
+
+function pulledOutDM($pdo)
+{
+    try {
+        $draw   = $_POST['draw'] ?? 1;
+        $start  = $_POST['start'] ?? 0;
+        $length = $_POST['length'] ?? 10;
+
+        $search = $_POST['search']['value'] ?? '';
+
+        $startDate = $_POST['startDate'] ?? '';
+        $endDate   = $_POST['endDate'] ?? '';
+
+        $where = "WHERE 1=1
+            AND hp.lotno IS NOT NULL AND hp.lotno != ''
+            AND hp.isActive IS NOT NULL AND hp.isActive != 'Y'
+        ";
+        $params = [];
+
+        if (!empty($startDate)) {
+            $where .= " AND hp.dmdprdte >= :startDate";
+            $params[':startDate'] = $startDate . " 00:00:00";
+        }
+        if (!empty($endDate)) {
+            $where .= " AND hp.dmdprdte <= :endDate";
+            $params[':endDate'] = $endDate . " 23:59:59";
+        }
+
+        // SEARCH
+        if (!empty($search)) {
+            $where .= " AND (
+                hp.lotno LIKE :search
+                OR g.GENDESC LIKE :search
+                OR h.brandname LIKE :search
+                OR h.dmdnost LIKE :search
+                OR h.strecode LIKE :search
+                OR h.formcode LIKE :search
+                OR chg.chrgdesc LIKE :search
+                OR DATE(hp.dmdprdte) LIKE :search
+                OR DATE(hp.expiry) LIKE :search
+
+                OR (
+                    CASE
+                        WHEN hp.expiry < CURDATE() AND hp.isActive = 'N' THEN 'EXPIRED/PULLOUT'
+                        WHEN hp.expiry < CURDATE() AND hp.isActive = 'Y' THEN 'EXPIRED'
+                        WHEN hp.expiry >= CURDATE() AND hp.isActive = 'N' THEN 'PULLOUT'
+                        WHEN hp.expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'NEAR EXPIRE'
+                        ELSE 'GOOD'
+                    END
+                ) LIKE :statusSearch
+            )";
+
+            $params[':search'] = "%$search%";
+            $params[':statusSearch'] = "%$search%";
+        }
+
+        $baseFrom = "
+            FROM hdmhdrprice hp
+
+            LEFT JOIN hdmhdr h
+                ON hp.dmdcomb = h.dmdcomb
+                AND hp.dmdctr = h.dmdctr
+
+            LEFT JOIN hcharge chg ON hp.dmhdrsub = chg.chrgcode
+
+            LEFT JOIN hdruggrp dg
+                ON h.grpcode = dg.grpcode
+
+            LEFT JOIN hgen g
+                ON dg.gencode = g.gencode
+        ";
+
+        $countSql = "SELECT COUNT(*) $baseFrom $where";
+        $countStmt = $pdo->prepare($countSql);
+        $countStmt->execute($params);
+        $total = $countStmt->fetchColumn();
+
+        $columns = [
+            0 => 'hp.lotno',
+            1 => 'g.GENDESC',
+            2 => 'hp.stockbal',
+            3 => 'hp.begbal',
+            4 => '(hp.begbal - hp.stockbal)',
+            5 => 'hp.dmselprice',
+            6 => 'hp.dmdprdte',
+            7 => 'hp.expiry',
+            8 => 'chg.chrgdesc',
+            9 => 'trigger_order' // computed column
+        ];
+        $orderColumnIndex = $_POST['order'][0]['column'] ?? 0;
+        $orderDir = $_POST['order'][0]['dir'] ?? 'asc';
+
+        $orderColumn = $columns[$orderColumnIndex] ?? 'hp.lotno';
+
+        $sql = "
+            SELECT
+                COALESCE(NULLIF(hp.lotno, ''), 'No Lot Number') AS lot_number,
+                CONCAT_WS(' ',
+                    CONCAT_WS('', g.GENDESC,
+                        CASE
+                            WHEN h.brandname IS NULL OR h.brandname = ''
+                            THEN ''
+                            ELSE CONCAT(' (', h.brandname, ')')
+                        END
+                    ),
+                    COALESCE(h.dmdnost, ''),
+                    COALESCE(h.strecode, ''),
+                    COALESCE(h.formcode, '')
+                ) AS drug_description,
+                COALESCE(NULLIF(hp.stockbal, ''), 'No Stock Balance') AS stock_balance,
+                hp.begbal AS beg_balance,
+                (hp.begbal - hp.stockbal) AS total_dispensed,
+                hp.dmselprice AS selling_price,
+                hp.dmdprdte AS entry_date,
+                COALESCE(NULLIF(hp.expiry, ''), 'No Expiration Date') AS expiration_date,
+                chg.chrgdesc AS account_type,
+
+                CASE
+                    WHEN hp.expiry < CURDATE() AND hp.isActive = 'N' THEN 'EXPIRED/PULLOUT'
+                    WHEN hp.expiry < CURDATE() AND hp.isActive = 'Y' THEN 'EXPIRED'
+                    WHEN hp.expiry >= CURDATE() AND hp.isActive = 'N' THEN 'PULLOUT'
+                    WHEN hp.expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'NEAR EXPIRE'
+                    ELSE 'GOOD'
+                END AS status,
+
+                CASE
+                    WHEN hp.expiry < CURDATE() AND hp.isActive = 'Y' THEN 0
+                    WHEN hp.expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1
+                    WHEN hp.expiry < CURDATE() AND hp.isActive = 'N' THEN 4
+                    WHEN hp.expiry >= CURDATE() AND hp.isActive = 'N' THEN 3
+                    ELSE 2
+                END AS trigger_order,
+
+                hp.delintkey AS id,
+                hp.dmdrem AS remarks
+
+            $baseFrom
+            $where
+            ORDER BY $orderColumn $orderDir
+        ";
+
+        // LIMIT
+        if ($length != -1) {
+            $sql .= " LIMIT :start, :length";
+        }
+
+        $stmt = $pdo->prepare($sql);
+
+        // Bind params
+        foreach ($params as $k => $v) {
+            $stmt->bindValue($k, $v);
+        }
+
+        if ($length != -1) {
+            $stmt->bindValue(':start', (int)$start, PDO::PARAM_INT);
+            $stmt->bindValue(':length', (int)$length, PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $totalSql = "
+            SELECT
+                SUM(CASE WHEN hp.expiry >= CURDATE()
+                    THEN hp.stockbal ELSE 0 END) AS totalStock,
+
+                SUM(CASE WHEN hp.expiry >= CURDATE()
+                    THEN hp.stockbal * hp.dmselprice ELSE 0 END) AS totalValue,
+
+                SUM(CASE WHEN hp.expiry < CURDATE()
+                    THEN hp.stockbal ELSE 0 END) AS expiredStock,
+
+                SUM(CASE WHEN hp.expiry < CURDATE()
+                    THEN hp.stockbal * hp.dmselprice ELSE 0 END) AS expiredValue
+
+            $baseFrom
+            $where
+        ";
+
+        $totalStmt = $pdo->prepare($totalSql);
+        $totalStmt->execute($params);
+        $totals = $totalStmt->fetch(PDO::FETCH_ASSOC);
+
+        /* =========================
+           FINAL JSON RESPONSE
+        ========================= */
+        echo json_encode([
+            "draw" => intval($draw),
+            "recordsTotal" => intval($total),
+            "recordsFiltered" => intval($total),
+            "data" => $data,
+            "totals" => $totals
+        ]);
+    } catch (Exception $e) {
+
+        // VERY IMPORTANT: prevents DataTables crash
+        echo json_encode([
+            "draw" => 0,
+            "recordsTotal" => 0,
+            "recordsFiltered" => 0,
+            "data" => [],
+            "error" => $e->getMessage()
+        ]);
+    }
+
+    exit;
 }

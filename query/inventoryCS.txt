@@ -11,6 +11,7 @@ SELECT
     hc2.cl2retprc AS selling_price,
     hc2.cl2dteas AS entry_date,
     hc2.expiry AS expiry_date,
+    hc2.cl2dtmd AS date_modified,
     chg.chrgdesc AS account_type,
 
     CASE
