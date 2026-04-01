@@ -133,8 +133,10 @@
                 // ✅ APPLY COLORS
                 if (totalHours > 8) {
                     $(row).addClass('table-danger');
+                    $('td:eq(5)', row).addClass('text-danger fw-bold');
                 } else if (totalHours > 4) {
                     $(row).addClass('table-warning');
+                    $('td:eq(5)', row).addClass('text-success fw-bold');
                 }
             }
         });
@@ -539,11 +541,11 @@
 </script>
 
 <script>
-    var table;
+    var issuedTable;
 
     $(document).ready(function() {
         if ($('#issuedDMTable').length) {
-            var table = $('#issuedDMTable').DataTable({
+            issuedTable = $('#issuedDMTable').DataTable({
                 processing: true,
                 serverSide: true,
                 ajax: {
@@ -551,14 +553,15 @@
                     type: "POST",
                     data: function(d) {
                         d.action = "issued";
-                        d.startDate = $('#issuedStart').val();
-                        d.endDate = $('#issuedEnd').val();
+                        d.startDate = $('#issuedStart').val() || null;
+                        d.endDate = $('#issuedEnd').val() || null;
                     },
                     dataSrc: function(json) {
-
-                        $('#totalDrugs').html(json.totals.totalDrugs ?? 0);
-                        $('#totalIssued').html(json.totals.totalIssued ?? 0);
-                        $('#totalReturned').html(json.totals.totalReturned ?? 0);
+                        if (json.totals) {
+                            $('#totalDrugs').html(json.totals.totalDrugs ?? 0);
+                            $('#totalIssued').html(json.totals.totalIssued ?? 0);
+                            $('#totalReturned').html(json.totals.totalReturned ?? 0);
+                        }
                         return json.data;
                     }
                 },
@@ -572,7 +575,7 @@
                     [9, 'desc']
                 ],
                 language: {
-                    processing: "Loading..."
+                    processing: "Loading issued records..."
                 },
                 dom: "<'row px-md-1 mb-2'<'col-md-2'l><'col-md-4'B><'col-md-6'f>>" +
                     "<'row'<'col-12'tr>>" +
@@ -626,21 +629,21 @@
             });
         }
         $('#filterIssued').click(function() {
-            table.ajax.reload();
+            if (issuedTable) issuedTable.ajax.reload();
         });
         $('#resetIssued').click(function() {
             $('#issuedStart').val('<?= $startDate ?>');
             $('#issuedEnd').val('<?= $endDate ?>');
-            table.ajax.reload();
+            if (issuedTable) issuedTable.ajax.reload();
         });
 
         $('#exportIssuedExcel').click(function(e) {
             e.preventDefault();
             let startDate = $('#issuedStart').val();
             let endDate = $('#issuedEnd').val();
-            let url = "modules/Pharmacy/export_issued_drugs.php" +
-                "?startDate=" + startDate +
-                "&endDate=" + endDate;
+            let url = "modules/Pharmacy/export_issued_drugs.php?" +
+                "startDate=" + encodeURIComponent(startDate) +
+                "&endDate=" + encodeURIComponent(endDate);
             window.open(url, '_blank');
         });
     });
@@ -649,7 +652,7 @@
 <script>
     $(document).ready(function() {
         // Initialize DataTable
-        var table = $('#inventoryTable').DataTable({
+        var inventoryTable = $('#inventoryTable').DataTable({
             processing: true,
             serverSide: true,
             ajax: {
@@ -749,10 +752,12 @@
                     render: function(data, type, row) {
                         const isDisabled = row.status === "PULLOUT" || row.status === "EXPIRED/PULLOUT";
                         return `
-                            <a href="#" class="pulloutBtn ${isDisabled ? "disabled-link" : ""}"
-                                data-id="${data}"
-                                data-drug="${row.drug_description}">
-                                Pull Out
+                            <a href="#"
+                            class="pulloutDrugBtn ${isDisabled ? "disabled-link text-muted" : ""}"
+                            ${isDisabled ? 'style="pointer-events:none;"' : ''}
+                            data-id="${data}"
+                            data-drug="${row.drug_description}">
+                            Pull Out
                             </a>
                         `;
                     }
@@ -769,12 +774,12 @@
 
         // Filter & Reset
         $('#filterInventory').click(function() {
-            table.ajax.reload();
+            inventoryTable.ajax.reload();
         });
         $('#resetInventory').click(function() {
             $('#inventoryStart').val('<?= $startDate ?>');
             $('#inventoryEnd').val('<?= $endDate ?>');
-            table.ajax.reload();
+            inventoryTable.ajax.reload();
         });
 
         $('#exportInventoryExcel').click(function(e) {
@@ -782,7 +787,7 @@
 
             let startDate = $('#inventoryStart').val();
             let endDate = $('#inventoryEnd').val();
-            let search = $('.dataTables_filter input').val(); // get global search
+            let search = $('#inventoryTable_filter input').val();
 
             let url = "modules/Pharmacy/export_inventory.php?startDate=" + encodeURIComponent(startDate) +
                 "&endDate=" + encodeURIComponent(endDate) +
@@ -791,15 +796,7 @@
             window.location.href = url;
         });
 
-        // Pull Out modal
-        let pullOutId = null;
-        $(document).on("click", ".pulloutBtn", function() {
-            pullOutId = $(this).data("id");
-            $("#modalDrug").text($(this).data("drug"));
-            $("#pullOutModal").modal("show");
-        });
-
-        $(document).on("click", ".pulloutBtn", function(e) {
+        $(document).on("click", ".pulloutDrugBtn", function(e) {
             if ($(this).hasClass("disabled-link")) {
                 e.preventDefault(); // block the click
                 return;
@@ -807,7 +804,7 @@
 
             pullOutId = $(this).data("id");
             $("#modalDrug").text($(this).data("drug"));
-            $("#pullOutRemarks").val(""); // ✅ reset
+            $("#pulledOutRemarks").val(""); // ✅ reset
             $("#pullOutModal").modal("show");
         });
 
@@ -815,7 +812,10 @@
         $("#confirmPullOut").click(function(e) {
             e.preventDefault(); // prevent form submission
 
-            if (!pullOutId) return alert("Invalid drug ID.");
+            if (pullOutId === null || pullOutId === undefined) {
+                console.log("DEBUG ID:", pullOutId);
+                return alert("Invalid drug ID.");
+            }
             let remarks = $("#pulledOutRemarks").val().trim();
             if (!remarks) {
                 alert("Please enter a reason.");
@@ -842,7 +842,8 @@
                         alert("Successfully pulled out item.");
                         $("#pullOutModal").modal("hide");
                         $("#pulledOutRemarks").val("");
-                        table.ajax.reload(null, false);
+                        pullOutId = null;
+                        inventoryTable.ajax.reload(null, false);
                     } else {
                         alert(res.message || "Failed to pull out the item.");
                     }
@@ -960,7 +961,7 @@
                     render: function(data, type, row) {
                         return `
                             <a href="#"
-                                class="pulloutBtn"
+                                class="undoPulloutBtn"
                                 data-id="${data}"
                                 data-drug="${row.drug_description}">
                                 Undo Pull Out
@@ -1001,7 +1002,7 @@
         });
         // Pull Out modal
         let pullOutId = null;
-        $(document).on("click", ".pulloutBtn", function(e) {
+        $(document).on("click", ".undoPulloutBtn", function(e) {
             if ($(this).hasClass("disabled-link")) {
                 e.preventDefault();
                 return;
@@ -1083,7 +1084,7 @@
 <!--------------------------- CENTRAL SUPPLY --------------------------->
 <script>
     $(document).ready(function() {
-        var table = $('#inventorySuppliesTable').DataTable({
+        var inventoryCSTable = $('#inventorySuppliesTable').DataTable({
             processing: true,
             serverSide: true,
             ajax: {
@@ -1158,6 +1159,12 @@
                     data: 'stock_balance'
                 },
                 {
+                    data: 'beg_balance'
+                },
+                {
+                    data: 'total_dispensed'
+                },
+                {
                     data: 'selling_price'
                 },
                 {
@@ -1177,8 +1184,136 @@
                 },
                 {
                     data: 'cost_center'
+                },
+                {
+                    data: null,
+                    render: function(data, type, row) {
+                        const isDisabled = row.status === "PULLOUT" || row.status === "EXPIRED/PULLOUT";
+
+                        return `
+                            <a href="#" class="pulloutSupplyBtn ${isDisabled ? "disabled-link text-muted" : ""}" ${isDisabled ? 'style="pointer-events:none;"' : ''}
+                                data-cl2dtmd="${row.cl2dtmd}"
+                                data-itemcode="${row.itemcode}"
+                                data-supply="${row.supply_name}">
+                                Pull Out
+                            </a>
+                        `;
+                    }
                 }
-            ]
+            ],
+            columnDefs: [{
+                    targets: 8,
+                    visible: false
+                },
+                {
+                    targets: 11,
+                    visible: false
+                }
+            ],
+            createdRow: function(row, data) {
+                if (data.status === "EXPIRED") {
+                    $(row).addClass('table-danger');
+                } else if (data.status === "NEAR EXPIRE") {
+                    $(row).addClass('table-warning');
+                }
+
+                if (data.stock_balance === "No Stock Balance") {
+                    $('td:eq(2)', row).addClass('text-danger fw-bold');
+                }
+
+                if (data.selling_price === "No Selling Price") {
+                    $('td:eq(5)', row).addClass('text-danger fw-bold');
+                }
+            }
+        });
+
+        // Filter & Reset
+        $('#filterSupplyInventory').click(function() {
+            inventoryCSTable.ajax.reload();
+        });
+
+        $('#resetSupplyInventory').click(function() {
+            $('#inventorySupplyStart').val('<?= $startDate ?>');
+            $('#inventorySupplyEnd').val('<?= $endDate ?>');
+            inventoryCSTable.ajax.reload();
+        });
+
+        $('#exportSupplyInventoryExcel').click(function(e) {
+            e.preventDefault();
+
+            let startDate = $('#inventorySupplyStart').val();
+            let endDate = $('#inventorySupplyEnd').val();
+            let search = $('#inventorySuppliesTable_filter input').val();
+
+            let url = "modules/CentralSupply/export_csInventory.php?startDate=" + encodeURIComponent(startDate) +
+                "&endDate=" + encodeURIComponent(endDate) +
+                "&search=" + encodeURIComponent(search);
+
+            window.location.href = url;
+        });
+
+        let pullOutData = {};
+        $('#inventorySuppliesTable').on("click", ".pulloutSupplyBtn", function(e) {
+            if ($(this).hasClass("disabled-link")) {
+                e.preventDefault();
+                return;
+            }
+
+            pullOutData = {
+                cl2dtmd: $(this).data("cl2dtmd"),
+                itemcode: $(this).data("itemcode")
+            };
+
+            $("#modalDrug").text($(this).data("supply"));
+            $("#pulledOutCSRemarks").val("");
+            $("#pullOutModal").modal("show");
+        });
+
+        $("#confirmCSPullOut").click(function(e) {
+            e.preventDefault();
+
+            if (pullOutData.cl2dtmd === null || pullOutData.cl2dtmd === undefined ||
+                pullOutData.itemcode === null || pullOutData.itemcode === undefined) {
+                return alert("Invalid item reference.");
+            }
+
+            let remarks = $("#pulledOutCSRemarks").val().trim();
+            if (!remarks) {
+                alert("Please enter a reason.");
+                return;
+            }
+
+            $.ajax({
+                url: "Controllers/CentralSupplyController.php",
+                type: "POST",
+                data: {
+                    action: "pullout",
+                    cl2dtmd: pullOutData.cl2dtmd,
+                    itemcode: pullOutData.itemcode,
+                    remarks: remarks
+                },
+                success: function(response) {
+                    let res;
+                    try {
+                        res = JSON.parse(response);
+                    } catch (e) {
+                        return alert("Invalid response from server");
+                    }
+
+                    if (res.status === "success") {
+                        alert("Successfully pulled out item.");
+                        $("#pullOutModal").modal("hide");
+                        $("#pulledOutCSRemarks").val("");
+                        pullOutData = {}; // reset
+                        inventoryCSTable.ajax.reload(null, false);
+                    } else {
+                        alert(res.message || "Failed to pull out the item.");
+                    }
+                },
+                error: function() {
+                    alert("AJAX error. Could not pull out item.");
+                }
+            });
         });
     });
 </script>

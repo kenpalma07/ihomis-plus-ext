@@ -64,7 +64,7 @@ function loadInventory($pdo)
         // SEARCH
         if (!empty($search)) {
             $where .= " AND (
-                hp.lotno LIKE :search
+                COALESCE(NULLIF(hp.lotno, ''), 'No Lot Number') LIKE :search
                 OR g.GENDESC LIKE :search
                 OR h.brandname LIKE :search
                 OR h.dmdnost LIKE :search

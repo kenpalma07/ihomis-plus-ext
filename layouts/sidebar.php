@@ -12,13 +12,17 @@ $issuedDrugsMeds = ($currentPage == 'issuedDrugsMeds');
 $issuedDrugsSupplies = ($currentPage == 'issuedDrugsSupplies');
 $pulledoutDrugsMeds = ($currentPage == 'pulledoutDrugsMeds');
 
-$suppliesPages = ['inventorySupplies'];
+$suppliesPages = ['inventorySupplies', 'issuedSupplies', 'pulledoutSupplies'];
 $isCentralSupplyOpen = in_array($currentPage, $suppliesPages);
 $inventorySupplies = ($currentPage == 'inventorySupplies');
+$issuedSupplies = ($currentPage == 'issuedSupplies');
+$pulledoutSupplies = ($currentPage == 'pulledoutSupplies');
 
-$medicalRecordPages = ['admissionLog', 'viewAdmissionLog', 'viewDashboard'];
+$medicalRecordPages = ['admissionLog', 'viewAdmissionLog', 'viewDashboard', 'erLog', 'viewERLog', 'opdLog', 'viewOPDLog'];
 $isMedicalRecordsOpen = in_array($currentPage, $medicalRecordPages);
 $activeAdmission = in_array($currentPage, ['admissionLog', 'viewAdmissionLog']);
+$activeER = in_array($currentPage, ['erLog', 'viewERLog']);
+$activeOPD = in_array($currentPage, ['opdLog', 'viewOPDLog']);
 $viewDashboard = ($currentPage == 'viewDashboard');
 ?>
 
@@ -144,7 +148,7 @@ $viewDashboard = ($currentPage == 'viewDashboard');
                         <li class="nav-item">
                             <a class="nav-link text-white <?= $issuedDrugsSupplies ? 'active' : '' ?>"
                                 href="index.php?page=issuedDrugsSupplies">
-                                Issued Non-Drugs and Supplies (Pharmacy)
+                                Issued Non-Drugs and Supplies (Pharmaceutical)
                             </a>
                         </li>
                     </ul>
@@ -156,16 +160,28 @@ $viewDashboard = ($currentPage == 'viewDashboard');
                 <a class="nav-link text-white d-flex justify-content-between align-items-center"
                     data-bs-toggle="collapse"
                     href="#centralSupplySubmenu"
-                    aria-expanded="<?= $inventorySupplies ? 'true' : 'false' ?>">
+                    aria-expanded="<?= $isCentralSupplyOpen  ? 'true' : 'false' ?>">
                     <span>Central Supply</span>
                     <i class="bi bi-chevron-down small"></i>
                 </a>
-                <div class="collapse ps-3 <?= $inventorySupplies ? 'show' : '' ?>" id="centralSupplySubmenu">
+                <div class="collapse ps-3 <?= $isCentralSupplyOpen ? 'show' : '' ?>" id="centralSupplySubmenu">
                     <ul class="nav flex-column">
                         <li class="nav-item">
                             <a class="nav-link text-white <?= $inventorySupplies ? 'active' : '' ?>"
                                 href="index.php?page=inventorySupplies">
                                 Inventory of Supplies
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white <?= $issuedSupplies ? 'active' : '' ?>"
+                                href="index.php?page=issuedSupplies">
+                                Issued Non-Drugs and Supplies
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white <?= $pulledoutSupplies ? 'active' : '' ?>"
+                                href="index.php?page=pulledoutSupplies">
+                                Pulled Out Non-Drugs and Supplies
                             </a>
                         </li>
                     </ul>
@@ -193,6 +209,18 @@ $viewDashboard = ($currentPage == 'viewDashboard');
                             <a class="nav-link text-white <?= $activeAdmission ? 'active' : '' ?>"
                                 href="index.php?page=admissionLog">
                                 <i class="fa-solid fa-hospital-user"></i> Admission Log
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white <?= $activeER ? 'active' : '' ?>"
+                                href="index.php?page=erLog">
+                                <i class="fa-solid fa-heartbeat"></i> Emergency Log
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white <?= $activeOPD ? 'active' : '' ?>"
+                                href="index.php?page=opdLog">
+                                <i class="fa-solid fa-user-md"></i> Out-Patient Log
                             </a>
                         </li>
                     </ul>

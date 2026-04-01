@@ -1,7 +1,7 @@
 <?php
 $pageTitle = "Central Supply Inventory";
 
-$startDate = $_GET['start_date'] ?? date('1969-m-d');
+$startDate = $_GET['start_date'] ?? date('Y-m-01');
 $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 ?>
 
@@ -85,7 +85,7 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
         </div>
 
         <div class="col-md-3 d-flex align-items-end">
-            <a href="#" id="exportInventoryExcel" class="btn btn-success w-100">
+            <a href="#" id="exportSupplyInventoryExcel" class="btn btn-success w-100">
                 <i class="bi bi-file-earmark-excel"></i> Export all to Excel
             </a>
         </div>
@@ -100,16 +100,60 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
                     <th>LOT NUMBER</th>
                     <th>SUPPLY</th>
                     <th>STOCK BALANCE</th>
+                    <th>BEGINNING BALANCE</th>
+                    <th>DRUGS DISPENSED</th>
                     <th>SELLING PRICE</th>
                     <th>ENTRY DATE</th>
                     <th>EXPIRY DATE</th>
                     <th>DATE MODIFIED</th>
                     <th>ACCOUNT TYPE</th>
                     <th>STATUS</th>
+                    <th>LOCATION</th>
                     <th>ACTION</th>
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
+    </div>
+</div>
+
+<!-- Pull Out Modal -->
+<div class="modal fade" id="pullOutModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Pull Out</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body text-center">
+                <p><strong>Non-drugs / Supplies:</strong></p>
+                <p id="modalDrug" class="fw-bold"></p>
+                <div class="mb-3 text-start">
+                    <label class="form-label"><b>Reason / Remarks</b></label>
+                    <textarea id="pulledOutCSRemarks" class="form-control" rows="3"
+                        placeholder="Enter reason for pulling out..." required></textarea>
+                </div>
+                <hr>
+                <p class="text-danger fw-bold">
+                    Are you sure you want to pull out this item?
+                </p>
+            </div>
+
+            <div class="modal-footer justify-content-center">
+                <button class="btn btn-secondary"
+                    data-bs-dismiss="modal">
+                    Cancel
+                </button>
+
+                <input type="hidden" name="drug" id="confirmDrug">
+
+                <button id="confirmCSPullOut" class="btn btn-danger">
+                    Yes Pull Out
+                </button>
+            </div>
+
+        </div>
     </div>
 </div>

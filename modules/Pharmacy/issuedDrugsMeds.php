@@ -1,7 +1,7 @@
 <?php
 $pageTitle = "Issued Drugs and Medicine Report";
 
-$startDate = $_GET['start_date'] ?? date('Y-m-d');
+$startDate = $_GET['start_date'] ?? date('Y-m-01');
 $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 ?>
 
