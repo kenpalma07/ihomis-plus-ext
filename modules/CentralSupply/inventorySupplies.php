@@ -98,10 +98,10 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
             <thead class="table-success">
                 <tr>
                     <th>LOT NUMBER</th>
-                    <th>SUPPLY</th>
+                    <th>SUPPLY NAME</th>
                     <th>STOCK BALANCE</th>
                     <th>BEGINNING BALANCE</th>
-                    <th>DRUGS DISPENSED</th>
+                    <th>DISPENSED</th>
                     <th>SELLING PRICE</th>
                     <th>ENTRY DATE</th>
                     <th>EXPIRY DATE</th>
@@ -109,6 +109,7 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
                     <th>ACCOUNT TYPE</th>
                     <th>STATUS</th>
                     <th>LOCATION</th>
+                    <th>REMARKS</th>
                     <th>ACTION</th>
                 </tr>
             </thead>
@@ -118,7 +119,7 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 </div>
 
 <!-- Pull Out Modal -->
-<div class="modal fade" id="pullOutModal" tabindex="-1">
+<div class="modal fade" id="pullOutCSModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
 
@@ -146,9 +147,6 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
                     data-bs-dismiss="modal">
                     Cancel
                 </button>
-
-                <input type="hidden" name="drug" id="confirmDrug">
-
                 <button id="confirmCSPullOut" class="btn btn-danger">
                     Yes Pull Out
                 </button>

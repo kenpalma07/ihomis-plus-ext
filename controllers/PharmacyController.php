@@ -353,6 +353,7 @@ function loadIssued($pdo)
 
             LEFT JOIN hperson p ON i.hpercode = p.hpercode
             LEFT JOIN hpersonal hp ON hp.employeeid = COALESCE(rx.issuedby, i.issuedby)
+            LEFT JOIN hrxo hx ON i.docointkey = hx.docointkey
         ";
 
         /* =========================
@@ -418,6 +419,7 @@ function loadIssued($pdo)
                 ) AS issued_by,
 
                 i.issuedte AS date_issued,
+                hx.dodate AS order_date,
                 i.lotno AS lot_number
 
             $baseFrom

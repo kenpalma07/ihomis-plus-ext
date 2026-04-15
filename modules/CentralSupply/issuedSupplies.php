@@ -17,5 +17,90 @@ $endDate   = $_GET['endDate'] ?? date('Y-m-d');
         CENTRAL SUPPLY
     </span>
 </nav>
+<br>
 
-<h3 class='text-danger p-4'>Under Maintenance :)</h3>
+<div class="px-md-3">
+    <div class="alert alert-info alert-compact-left" role="alert">
+        <p class="alert-heading"><b>NOTE:</b> This masterlist includes all non-drugs and supplies issued to patients. Use the search box to filter by <b>HPERCODE</b>, <b>Patient Name</b>, or <b>Supply Name</b>.</p>
+    </div>
+</div>
+
+<h6 class="px-md-3 text-muted">ISSUED NON-DRUGS AND SUPPLIES</h6>
+
+<div class="px-md-3">
+    <div class="row mb-1">
+        <div class="col-md-4">
+            <div class="alert alert-primary py-2">
+                <strong>Total Supplies:</strong> <span id="totalSupplies">0</span>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="alert alert-success py-2">
+                <strong>Total Issued Qty:</strong> <span id="totalIssued">0</span>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="alert alert-warning py-2">
+                <strong>Total Returned Qty:</strong> <span id="totalReturned">0</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="px-md-3 mb-3">
+    <form id="filterCSForm" class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label"><b>Date Issued From</b></label>
+            <input type="date" id="issuedCSStart" class="form-control"
+                value="<?= htmlspecialchars($startDate) ?>">
+        </div>
+
+        <div class="col-md-3">
+            <label class="form-label"><b>Date Issued To</b></label>
+            <input type="date" id="issuedCSEnd" class="form-control" value="<?= htmlspecialchars($endDate) ?>">
+        </div>
+
+        <div class="col-md-3">
+            <button type="submit" id="filterIssuedCS" class="btn btn-primary">
+                Filter
+            </button>
+            <button type="button" id="resetIssuedCS" class="btn btn-secondary">
+                Reset
+            </button>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+            <a href="#" id="exportIssuedCS" class="btn btn-success w-100">
+                <i class="bi bi-file-earmark-excel"></i> Export all to Excel
+            </a>
+        </div>
+    </form>
+</div>
+
+<div class="px-md-1">
+    <div class="table-container">
+        <table id="issuedCSTable" class="table table-striped table-bordered nowrap px-md-1" style="width:100%">
+            <thead class="table-success">
+                <tr>
+                    <th>ORDER DATE</th>
+                    <th>ISSUED DATE</th>
+                    <th>TURNAROUND TIME</th>
+                    <th>LOT NUMBER</th>
+                    <th>SUPPLY NAME</th>
+                    <th>HPERCODE</th>
+                    <th>PATIENT NAME</th>
+                    <th>CHARGESLIP</th>
+                    <th>REQUEST QTY</th>
+                    <th>ISSUED QTY</th>
+                    <th>PRICE</th>
+                    <th>TOTAL AMOUNT</th>
+                    <th>RETURNED QTY</th>
+                    <th>ACCOUNT TYPE</th>
+                    <th>ISSUED BY</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>

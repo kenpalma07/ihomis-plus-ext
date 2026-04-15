@@ -5,6 +5,11 @@ $startDate = $_GET['start_date'] ?? date('Y-m-01');
 $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 ?>
 
+<div id="issuedFilters"
+     data-start="<?= $startDate ?? '' ?>"
+     data-end="<?= $endDate ?? '' ?>">
+</div>
+
 <nav class="navbar navbar-light bg-success sticky-top flex-md-nowrap p-2 shadow">
     <button class="navbar-toggler d-md-none collapsed"
         type="button"
@@ -83,6 +88,8 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
         <table id="issuedDMTable" class="table table-striped table-bordered nowrap px-md-1" style="width:100%">
             <thead class="table-success">
                 <tr>
+                    <th>ORDER DATE</th>
+                    <th>DATE ISSUED</th>
                     <th>LOT NUMBER</th>
                     <th>DRUG/MEDICINE</th>
                     <th>HPERCODE</th>
@@ -92,7 +99,6 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
                     <th>ORDER</th>
                     <th>ACCOUNT</th>
                     <th>ISSUED BY</th>
-                    <th>DATE ISSUED</th>
                 </tr>
             </thead>
             <tbody>

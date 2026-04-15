@@ -1,7 +1,7 @@
 <?php
 $pageTitle = "Drugs & Medicine Inventory";
 
-$startDate = $_GET['startDate'] ?? date('Y-m-01');
+$startDate = $_GET['startDate'] ?? date('Y-01-01');
 $endDate   = $_GET['endDate'] ?? date('Y-m-d');
 ?>
 
