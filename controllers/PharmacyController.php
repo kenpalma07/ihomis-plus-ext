@@ -340,19 +340,18 @@ function loadIssued($pdo)
                 AND i.dmdcomb = r.dmdcomb
                 AND i.dmdctr = r.dmdctr
 
-            LEFT JOIN hdmhdr h ON i.dmdcomb = h.dmdcomb
+            -- ✅ FIXED JOIN
+            LEFT JOIN hdmhdr h 
+                ON i.dmdcomb = h.dmdcomb
+                AND i.dmdctr = h.dmdctr
+
             LEFT JOIN hdruggrp dg ON h.grpcode = dg.grpcode
             LEFT JOIN hgen g ON dg.gencode = g.gencode
-            
+
             LEFT JOIN hcharge chg ON i.chrgcode = chg.chrgcode
 
-            LEFT JOIN hrxissue rx
-                ON i.dmdcomb = rx.dmdcomb
-                AND i.dmdctr = rx.dmdctr
-                AND i.lotno = rx.lotno
-
             LEFT JOIN hperson p ON i.hpercode = p.hpercode
-            LEFT JOIN hpersonal hp ON hp.employeeid = COALESCE(rx.issuedby, i.issuedby)
+            LEFT JOIN hpersonal hp ON hp.employeeid = i.issuedby
             LEFT JOIN hrxo hx ON i.docointkey = hx.docointkey
         ";
 
@@ -371,16 +370,17 @@ function loadIssued($pdo)
             SELECT
                 i.lotno AS lot_number,
                 CONCAT_WS(' ',
-                    CONCAT_WS('', g.GENDESC,
-                        CASE
+                    CONCAT(
+                        g.GENDESC,
+                        CASE 
                             WHEN h.brandname IS NULL OR h.brandname = ''
                             THEN ''
                             ELSE CONCAT(' (', h.brandname, ')')
                         END
                     ),
-                    COALESCE(h.dmdnost,''),
-                    COALESCE(h.strecode,''),
-                    COALESCE(h.formcode,'')
+                    COALESCE(h.dmdnost, ''),
+                    COALESCE(h.strecode, ''),
+                    COALESCE(h.formcode, '')
                 ) AS drug_description,
 
                 p.hpercode,
@@ -402,7 +402,7 @@ function loadIssued($pdo)
                 IFNULL(r.qty_returned,0) AS quantity_returned,
 
                 CASE
-                    WHEN rx.status = 'R' THEN 'Prescription Only'
+                    WHEN hx.estatus = 'R' THEN 'Prescription Only'
                     ELSE 'Order'
                 END AS order_type,
 
@@ -419,8 +419,7 @@ function loadIssued($pdo)
                 ) AS issued_by,
 
                 i.issuedte AS date_issued,
-                hx.dodate AS order_date,
-                i.lotno AS lot_number
+                hx.dodate AS order_date
 
             $baseFrom
             $where
