@@ -1,7 +1,7 @@
 <?php
 $pageTitle = "Issued Non-Drugs and Supplies";
 
-$startDate = $_GET['startDate'] ?? date('Y-m-01');
+$startDate = $_GET['startDate'] ?? date('Y-m-d');
 $endDate   = $_GET['endDate'] ?? date('Y-m-d');
 ?>
 

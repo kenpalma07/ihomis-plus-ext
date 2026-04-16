@@ -1,13 +1,13 @@
 <?php
 $pageTitle = "Issued Drugs and Medicine Report";
 
-$startDate = $_GET['start_date'] ?? date('Y-m-01');
+$startDate = $_GET['start_date'] ?? date('Y-m-d');
 $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 ?>
 
 <div id="issuedFilters"
-     data-start="<?= $startDate ?? '' ?>"
-     data-end="<?= $endDate ?? '' ?>">
+    data-start="<?= $startDate ?? '' ?>"
+    data-end="<?= $endDate ?? '' ?>">
 </div>
 
 <nav class="navbar navbar-light bg-success sticky-top flex-md-nowrap p-2 shadow">
