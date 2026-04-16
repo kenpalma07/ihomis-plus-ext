@@ -1,11 +1,23 @@
 SELECT
-	-- hrq.docointkey AS id,
-	hq.dodate AS order_date,
-	hrq.issuedte AS issued_date,
-	hrq.itemcode AS lot_number,
-	hc.cl2desc AS supply_name,
-	hp.hpercode AS hpercode,
-	CONCAT(
+    hq.dodate AS order_date,
+    hrq.issuedte AS issued_date,
+
+    CONCAT(
+        FLOOR(TIMESTAMPDIFF(SECOND, hq.dodate, hrq.issuedte) / 86400),
+        ' days - ',
+        SEC_TO_TIME(
+            MOD(
+                TIMESTAMPDIFF(SECOND, hq.dodate, hrq.issuedte), 86400
+            )
+        )
+    ) AS turnaround_time,
+
+    COALESCE(NULLIF(hrq.itemcode, ''), 'No Lot Number') AS lot_number,
+
+    hc.cl2desc AS supply_name,
+    hp.hpercode,
+
+    CONCAT(
         hp.patlast, ', ',
         hp.patfirst,
         CASE
@@ -17,39 +29,47 @@ SELECT
             ELSE CONCAT(', ', hp.patmiddle)
         END
     ) AS patient,
+
     hrq.pcchrgcod AS charge_code,
+    hq.pchrgqty AS request_quantity,
     hrq.qty AS issued_quantity,
     hrq.pchrgup AS selling_price,
     hrq.pcchrgamt AS total_amount,
-    hr.qty AS returned_quantity,
-    chg.chrgdesc AS account_type,
-    CONCAT(
-    	hpl.lastname, ', ',
-    	hpl.firstname
-    ) AS issued_by
-    
-FROM
-	hrqdissue hrq
-	
-LEFT JOIN hclass2 hc
-	ON hrq.cl2comb = hc.cl2comb	
-	
-LEFT JOIN hperson hp
-	ON hrq.hpercode = hp.hpercode
-	
-LEFT JOIN hrqd hq
-	ON hrq.docointkey = hq.docointkey
-	
-LEFT JOIN hrqdreturn hr
-	ON hrq.docointkey = hr.docointkey
-	
-LEFT JOIN hcharge chg 
-   ON hrq.chrgcode = chg.chrgcode
-   
-LEFT JOIN hpersonal hpl
-	ON hrq.givenby = hpl.employeeid
-	
--- WHERE hrq.docointkey = "00000000000689000000000001456908/07/202523:26:22-08/11/2025 12:15:20-MD0152347-018000100000003"
-	
-ORDER BY order_date DESC
 
+    IFNULL(hr.qty, 0) AS returned_quantity,
+
+    chg.chrgdesc AS account_type,
+
+    CONCAT(
+        hpl.lastname, ', ',
+        hpl.firstname
+    ) AS issued_by
+
+FROM hrqdissue hrq
+
+LEFT JOIN hclass2 hc
+    ON hrq.cl2comb = hc.cl2comb
+
+LEFT JOIN hperson hp
+    ON hrq.hpercode = hp.hpercode
+
+LEFT JOIN hrqd hq
+    ON hrq.docointkey = hq.docointkey
+    AND hrq.cl2comb = hq.cl2comb
+
+-- ✅ FIXED RETURN JOIN
+LEFT JOIN (
+    SELECT docointkey, cl2comb, SUM(qty) AS qty
+    FROM hrqdreturn
+    GROUP BY docointkey, cl2comb
+) hr
+    ON hrq.docointkey = hr.docointkey
+    AND hrq.cl2comb = hr.cl2comb
+
+LEFT JOIN hcharge chg 
+    ON hrq.chrgcode = chg.chrgcode
+
+LEFT JOIN hpersonal hpl
+    ON hrq.givenby = hpl.employeeid
+
+WHERE 1=1

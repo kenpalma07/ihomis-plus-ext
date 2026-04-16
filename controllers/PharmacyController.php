@@ -368,7 +368,7 @@ function loadIssued($pdo)
         ========================= */
         $sql = "
             SELECT
-                i.lotno AS lot_number,
+                COALESCE(NULLIF(i.lotno, ''), 'No Lot Number') AS lot_number,
                 CONCAT_WS(' ',
                     CONCAT(
                         g.GENDESC,

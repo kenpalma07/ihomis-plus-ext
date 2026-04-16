@@ -15,6 +15,7 @@ $routes = [
     'admissionLog'              => 'modules/Medical_Records/admissionLog.php',
     'viewAdmissionLog'          => 'modules/Medical_Records/viewAdmissionLog.php',
     'erLog'                     => 'modules/Medical_Records/erLog.php',
+    'inventoryStockRoom'        => 'modules/Stockroom/inventoryStockroom.php'
     // 'viewERLog'                 => 'modules/Medical_Records/viewERLog.php',
     // 'opdLog'                    => 'modules/Medical_Records/opdLog.php',
     // 'viewOPDLog'                => 'modules/Medical_Records/viewOPDLog.php'

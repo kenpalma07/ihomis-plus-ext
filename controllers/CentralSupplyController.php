@@ -598,24 +598,30 @@ function loadCSIssued($pdo)
         }
 
         $baseFrom = "
-            FROM
-                hrqdissue hrq
-                
+            FROM hrqdissue hrq
+
             LEFT JOIN hclass2 hc
-                ON hrq.cl2comb = hc.cl2comb	
-                
+                ON hrq.cl2comb = hc.cl2comb
+
             LEFT JOIN hperson hp
                 ON hrq.hpercode = hp.hpercode
-                
+
             LEFT JOIN hrqd hq
                 ON hrq.docointkey = hq.docointkey
-                
-            LEFT JOIN hrqdreturn hr
+                AND hrq.cl2comb = hq.cl2comb
+
+            -- ✅ FIXED RETURN JOIN
+            LEFT JOIN (
+                SELECT docointkey, cl2comb, SUM(qty) AS qty
+                FROM hrqdreturn
+                GROUP BY docointkey, cl2comb
+            ) hr
                 ON hrq.docointkey = hr.docointkey
-                
+                AND hrq.cl2comb = hr.cl2comb
+
             LEFT JOIN hcharge chg 
-            ON hrq.chrgcode = chg.chrgcode
-            
+                ON hrq.chrgcode = chg.chrgcode
+
             LEFT JOIN hpersonal hpl
                 ON hrq.givenby = hpl.employeeid
         ";

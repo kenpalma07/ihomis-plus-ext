@@ -18,6 +18,10 @@ $inventorySupplies = ($currentPage == 'inventorySupplies');
 $issuedSupplies = ($currentPage == 'issuedSupplies');
 $pulledoutSupplies = ($currentPage == 'pulledoutSupplies');
 
+$stockRoomPages = ['inventoryStockRoom'];
+$isStockRoomOpen = in_array($currentPage, $stockRoomPages);
+$inventoryStockRoom = ($currentPage == 'inventoryStockRoom');
+
 $medicalRecordPages = ['admissionLog', 'viewAdmissionLog', 'viewDashboard', 'erLog', 'viewERLog', 'opdLog', 'viewOPDLog'];
 $isMedicalRecordsOpen = in_array($currentPage, $medicalRecordPages);
 $activeAdmission = in_array($currentPage, ['admissionLog', 'viewAdmissionLog']);
@@ -182,6 +186,27 @@ $viewDashboard = ($currentPage == 'viewDashboard');
                             <a class="nav-link text-white <?= $pulledoutSupplies ? 'active' : '' ?>"
                                 href="index.php?page=pulledoutSupplies">
                                 Pulled Out Non-Drugs and Supplies
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
+            <!-- STOCKROOM -->
+             <li class="nav-item">
+                <a class="nav-link text-white d-flex justify-content-between align-items-center"
+                    data-bs-toggle="collapse"
+                    href="#stockRoomSubmenu"
+                    aria-expanded="<?= $isStockRoomOpen ? 'true' : 'false' ?>">
+                    <span>Stock Room</span>
+                    <i class="bi bi-chevron-down small"></i>
+                </a>
+                <div class="collapse ps-3 <?= $isStockRoomOpen ? 'show' : '' ?>" id="stockRoomSubmenu">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link text-white <?= $inventoryStockRoom ? 'active' : '' ?>"
+                                href="index.php?page=inventoryStockRoom">
+                                Inventory of Stock Room
                             </a>
                         </li>
                     </ul>
