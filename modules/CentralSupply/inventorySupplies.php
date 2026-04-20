@@ -1,9 +1,13 @@
 <?php
 $pageTitle = "Central Supply Inventory";
 
-$startDate = $_GET['start_date'] ?? date('Y-m-01');
-$endDate   = $_GET['end_date'] ?? date('Y-m-d');
+$startDate = $_GET['start_date'] ?? date('');
+$endDate   = $_GET['end_date'] ?? date('');
 ?>
+<div id="csInventoryFilters"
+    data-start="<?= $startDate ?? '' ?>"
+    data-end="<?= $endDate ?? '' ?>">
+</div>
 
 <nav class="navbar navbar-light bg-success sticky-top flex-md-nowrap p-2 shadow">
     <button class="navbar-toggler d-md-none collapsed"

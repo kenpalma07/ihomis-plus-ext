@@ -70,8 +70,13 @@ function loadInventory($pdo)
                 OR h.dmdnost LIKE :search
                 OR h.strecode LIKE :search
                 OR h.formcode LIKE :search
-                OR CAST(hp.stockbal AS CHAR) LIKE :search
-                OR CAST(hp.dmselprice AS CHAR) LIKE :search
+                OR (
+                    CASE
+                        WHEN hp.stockbal IS NULL OR hp.stockbal = 0 THEN 'No Stock Balance'
+                        ELSE hp.stockbal
+                    END  
+                ) LIKE :search
+                OR COALESCE(NULLIF(hp.dmselprice, ''), 'No Selling Price') LIKE :search
                 OR DATE(hp.dmdprdte) LIKE :search
                 OR DATE(hp.expiry) LIKE :search
                 OR hp.dmhdrsub LIKE :search
@@ -134,10 +139,13 @@ function loadInventory($pdo)
                     COALESCE(h.strecode, ''),
                     COALESCE(h.formcode, '')
                 ) AS drug_description,
-                COALESCE(NULLIF(hp.stockbal, ''), 'No Stock Balance') AS stock_balance,
+                CASE
+                    WHEN hp.stockbal IS NULL OR hp.stockbal = 0 THEN 'No Stock Balance'
+                    ELSE hp.stockbal
+                END AS stock_balance,
                 hp.begbal AS beg_balance,
                 (hp.begbal - hp.stockbal) AS total_dispensed,
-                hp.dmselprice AS selling_price,
+                COALESCE(NULLIF(hp.dmselprice, ''), 'No Selling Price') AS selling_price,
                 hp.dmdprdte AS entry_date,
                 COALESCE(NULLIF(hp.expiry, ''), 'No Expiration Date') AS expiration_date,
                 chg.chrgdesc AS account_type,

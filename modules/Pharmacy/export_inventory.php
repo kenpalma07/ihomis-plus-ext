@@ -24,9 +24,10 @@ $search    = $_GET['search'] ?? '';
    WHERE CONDITIONS
 ========================= */
 $where = "WHERE 1=1
-            AND hp.lotno IS NOT NULL AND hp.lotno != ''
-            AND hp.isActive IS NOT NULL AND hp.isActive != 'N'
-            AND hp.stock_status IS NOT NULL AND hp.stock_status != 'N'
+            AND hp.isActive = 'Y'
+            -- AND hp.lotno IS NOT NULL AND hp.lotno != ''
+            -- AND hp.isActive IS NOT NULL AND hp.isActive != 'N'
+            -- AND hp.stock_status IS NOT NULL AND hp.stock_status != 'N'
             ";
 
 $params = [];

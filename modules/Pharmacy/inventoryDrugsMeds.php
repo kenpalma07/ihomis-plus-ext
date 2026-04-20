@@ -1,9 +1,14 @@
 <?php
 $pageTitle = "Drugs & Medicine Inventory";
 
-$startDate = $_GET['startDate'] ?? date('Y-01-01');
-$endDate   = $_GET['endDate'] ?? date('Y-m-d');
+$startDate = $_GET['startDate'] ?? date('');
+$endDate   = $_GET['endDate'] ?? date('');
 ?>
+
+<div id="dmInventoryFilters"
+    data-start="<?= $startDate ?? '' ?>"
+    data-end="<?= $endDate ?? '' ?>">
+</div>
 
 <nav class="navbar navbar-light bg-success sticky-top flex-md-nowrap p-2 shadow">
     <button class="navbar-toggler d-md-none collapsed"
