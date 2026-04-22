@@ -113,7 +113,16 @@ SELECT
     ) AS issued_by,
 
     i.issuedte AS date_issued,
-    hx.dodate AS order_date
+    hx.dodate AS order_date,
+    CONCAT(
+        FLOOR(TIMESTAMPDIFF(SECOND, hx.dodate, i.issuedte) / 86400),
+        ' days - ',
+        SEC_TO_TIME(
+            MOD(
+                TIMESTAMPDIFF(SECOND, hx.dodate, i.issuedte), 86400
+            )
+        )
+    ) AS turnaround_time
 
 FROM hrxoissue i
 

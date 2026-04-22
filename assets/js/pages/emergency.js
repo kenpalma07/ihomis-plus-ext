@@ -1,113 +1,139 @@
 $(document).ready(function () {
-  initERTurnAroundTimeTable();
+	initERTurnAroundTimeTable();
 });
 
+let erTable = null;
+
 function initERTurnAroundTimeTable() {
-  var erTable;
-  // DATA TABLE
-  if ($("#erTable").length) {
-    erTable = $("#erTable").DataTable({
-      serverSide: true,
-      processing: true,
-      ajax: {
-        url: "Controllers/EmergencyController.php",
-        data: function (d) {
-          d.regStart = $("#regStart").val();
-          d.regEnd = $("#regEnd").val();
-          d.disStart = $("#disStart").val();
-          d.disEnd = $("#disEnd").val();
-        },
-      },
-      columns: [
-        { data: 0 },
-        { data: 1 },
-        { data: 2 },
-        { data: 3 },
-        { data: 4 },
-        { data: 5 },
-        { data: 6 },
-      ],
-      language: {
-        emptyTable: "No records found",
-        processing: "Loading...",
-      },
-      pageLength: 10,
-      scrollX: true,
+	if (!$("#erTable").length) return;
 
-      rowCallback: function (row, data) {
-        if (!data[5]) return;
+	erTable = $("#erTable").DataTable({
+		serverSide: true,
+		processing: true,
 
-        let text = data[5].toLowerCase();
-        let totalHours = 0;
+		ajax: {
+			url: "Controllers/EmergencyController.php",
+			type: "POST",
+			data: function (d) {
+				d.action = "erTurnaroundTime";
 
-        let dayMatch = text.match(/(\d+)\s*day/);
-        if (dayMatch) totalHours += parseInt(dayMatch[1]) * 24;
+				d.regStart = $("#regStart").val() || "";
+				d.regEnd = $("#regEnd").val() || "";
+				d.disStart = $("#disStart").val() || "";
+				d.disEnd = $("#disEnd").val() || "";
+			},
+		},
 
-        let timeMatch = text.match(/(\d+):(\d+)(?::(\d+))?/);
-        if (timeMatch) {
-          let h = parseInt(timeMatch[1]) || 0;
-          let m = parseInt(timeMatch[2]) || 0;
-          let s = parseInt(timeMatch[3]) || 0;
-          totalHours += h + m / 60 + s / 3600;
-        }
+		columns: [
+			{ data: "hpercode" },
+			{ data: "patient" },
+			{ data: "birthdate" },
+			{ data: "registration_date" },
+			{ data: "discharged_date" },
+			{ data: "turnaround_dhms" },
+			{ data: "discharge_by" },
+		],
 
-        if (totalHours > 8) {
-          $(row).addClass("table-danger");
-        } else if (totalHours > 4) {
-          $(row).addClass("table-warning");
-        }
-      },
-    });
+		pageLength: 10,
+		lengthMenu: [
+			[5, 10, 15, 50, 100, -1],
+			[5, 10, 15, 50, 100, "All"],
+		],
+		scrollX: true,
+		order: [[3, "desc"]],
+		pagingType: "full_numbers",
+		dom:
+			"<'row px-md-1 mb-2'<'col-md-2'l><'col-md-4'B><'col-md-6'f>>" +
+			"<'row'<'col-12'tr>>" +
+			"<'row px-md-4'<'col-md-5'i><'col-md-7'p>>",
 
-    // FILTER
-    $("#filterBtn").click(function () {
-      erTable.ajax.reload();
-    });
+		buttons: [
+			{
+				extend: "excelHtml5",
+				text: "Excel",
+				className: "btn btn-success btn-sm",
+				title: "Emergency Turn Around Time Report",
+				exportOptions: { columns: ":visible" },
+			},
+			{
+				extend: "csvHtml5",
+				text: "CSV",
+				className: "btn btn-primary btn-sm",
+				title: "Emergency Turn Around Time Report",
+			},
+			{
+				extend: "print",
+				text: "Print",
+				className: "btn btn-secondary btn-sm",
+				title: "Emergency Turn Around Time Report",
+			},
+		],
 
-    // RESET
-    $("#resetBtn").click(function () {
-      $("#regStart, #regEnd, #disStart, #disEnd").val("");
-      erTable.ajax.reload();
-    });
+		rowCallback: function (row, data) {
+			if (!data.turnaround_dhms) return;
 
-    // EXPORT
-    $("#exportEmergencyBtn").click(function (e) {
-      e.preventDefault();
+			let text = data.turnaround_dhms.toLowerCase();
+			let totalHours = 0;
 
-      let url =
-        "modules/Emergency/export_EmergencyTurnAroundTime.php?" +
-        "regStart=" +
-        encodeURIComponent($("#regStart").val()) +
-        "&regEnd=" +
-        encodeURIComponent($("#regEnd").val()) +
-        "&disStart=" +
-        encodeURIComponent($("#disStart").val()) +
-        "&disEnd=" +
-        encodeURIComponent($("#disEnd").val()) +
-        "&search=" +
-        encodeURIComponent($("#emergencyTable_filter input").val());
+			let dayMatch = text.match(/(\d+)\s*day/);
+			if (dayMatch) totalHours += parseInt(dayMatch[1]) * 24;
 
-      window.open(url, "_blank");
-    });
-  }
+			let timeMatch = text.match(/(\d+):(\d+)(?::(\d+))?/);
+			if (timeMatch) {
+				let h = parseInt(timeMatch[1]) || 0;
+				let m = parseInt(timeMatch[2]) || 0;
+				let s = parseInt(timeMatch[3]) || 0;
+				totalHours += h + m / 60 + s / 3600;
+			}
 
-  // PATIENT TABLE
-  if ($("#patientTable").length) {
-    $("#patientTable").DataTable({
-      processing: true,
-      serverSide: true,
-      ajax: "controllers/PatientController.php",
-      pageLength: 15,
-      scrollX: true,
-    });
-  }
+			if (totalHours > 8) {
+				$(row).addClass("table-danger");
+			} else if (totalHours > 4) {
+				$(row).addClass("table-warning");
+			}
+		},
+	});
 
-  // TOOLTIP
-  var tooltipTriggerList = [].slice.call(
-    document.querySelectorAll('[data-bs-toggle="tooltip"]'),
-  );
+	// FILTER
+	$("#filterBtn")
+		.off("click")
+		.on("click", function () {
+			erTable.ajax.reload();
+		});
 
-  tooltipTriggerList.map(function (el) {
-    return new bootstrap.Tooltip(el);
-  });
+	// RESET
+	$("#resetBtn")
+		.off("click")
+		.on("click", function () {
+			$("#regStart, #regEnd, #disStart, #disEnd").val("");
+			erTable.ajax.reload();
+		});
+
+	// EXPORT
+	$("#exportEmergencyBtn")
+		.off("click")
+		.on("click", function (e) {
+			e.preventDefault();
+
+			let searchValue = $("#erTable_filter input").val() || "";
+			let regStart = $("#regStart").val() || "";
+			let regEnd = $("#regEnd").val() || "";
+			let disStart = $("#disStart").val() || "";
+			let disEnd = $("#disEnd").val() || "";
+
+			let url =
+				"modules/Emergency/export_erTurnAroundTime.php?" +
+				"regStart=" +
+				encodeURIComponent($("#regStart").val()) +
+				"&regEnd=" +
+				encodeURIComponent($("#regEnd").val()) +
+				"&disStart=" +
+				encodeURIComponent($("#disStart").val()) +
+				"&disEnd=" +
+				encodeURIComponent($("#disEnd").val()) +
+				"&search=" +
+				encodeURIComponent($("#erTable_filter input").val() || "");
+
+			window.open(url, "_blank");
+		});
 }

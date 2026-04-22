@@ -1,0 +1,65 @@
+SET @startDate = '0000-01-01';	
+SET @endDate = NOW();
+
+SELECT
+    COUNT(*) AS total_er_visits,
+
+    SUM(CASE 
+        WHEN erdtedis IS NOT NULL 
+        AND erdtedis BETWEEN @startDate AND @endDate
+        THEN 1 ELSE 0 
+    END) AS total_discharges,
+
+    SUM(CASE 
+        WHEN erdtedis IS NULL 
+        THEN 1 ELSE 0 
+    END) AS current_er_patients,
+
+    -- ✅ DEATHS (strict condition)
+    SUM(CASE 
+        WHEN pexpireddate IS NOT NULL 
+        AND dispcode = 'DIEDD'
+        AND pexpireddate BETWEEN @startDate AND @endDate
+        THEN 1 ELSE 0 
+    END) AS total_deaths,
+
+    SUM(CASE 
+        WHEN newold = 'N' 
+        AND erdate BETWEEN @startDate AND @endDate
+        THEN 1 ELSE 0 
+    END) AS new_patients,
+
+    SUM(CASE 
+        WHEN newold = 'O' 
+        AND erdate BETWEEN @startDate AND @endDate
+        THEN 1 ELSE 0 
+    END) AS old_patients,
+
+    (
+        SELECT COUNT(DISTINCT h1.hpercode)
+        FROM herlog h1
+        JOIN herlog h2 
+            ON h1.hpercode = h2.hpercode
+            AND h2.erdate > h1.erdtedis
+        WHERE h1.erdtedis BETWEEN @startDate AND @endDate
+    ) AS readmitted_patients,
+
+    ROUND(
+        (
+            SELECT COUNT(DISTINCT h1.hpercode)
+            FROM herlog h1
+            JOIN herlog h2 
+                ON h1.hpercode = h2.hpercode
+                AND h2.erdate > h1.erdtedis
+            WHERE h1.erdtedis BETWEEN @startDate AND @endDate
+        ) 
+        / NULLIF(
+            SUM(CASE 
+                WHEN erdtedis BETWEEN @startDate AND @endDate 
+                THEN 1 ELSE 0 
+            END), 0
+        ) * 100
+    ,2) AS readmission_rate
+
+FROM herlog
+WHERE erdate BETWEEN @startDate AND @endDate;

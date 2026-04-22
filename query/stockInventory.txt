@@ -1,0 +1,88 @@
+SELECT
+    stck.dateadd AS entry_date,
+    stck.`expire` AS expiry_date,
+
+    CASE
+        WHEN stck.`expire` < CURDATE() AND stck.isActive = 'I' THEN 'EXPIRED/PULLOUT'
+        WHEN stck.`expire` < CURDATE() AND stck.isActive = 'A' THEN 'EXPIRED'
+        WHEN stck.`expire` >= CURDATE() AND stck.isActive = 'I' THEN 'PULLOUT'
+        WHEN stck.`expire` BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'NEAR EXPIRE'
+        ELSE 'GOOD'
+    END AS estatus,
+
+    sup.suppname AS supplier,
+    stck.sales_invoice AS refno_salesinvo,
+
+    CASE
+        WHEN stck.itemtype = 'DM' THEN
+            CONCAT_WS(' ',
+                g.GENDESC,
+                COALESCE(h.dmdnost, ''),
+                COALESCE(h.strecode, ''),
+                COALESCE(h.formcode, '')
+            )
+
+        WHEN stck.itemtype = 'SM' THEN
+            CONCAT_WS(' ',
+                h2.cl2desc,
+                h2.uomcode
+            )
+
+        ELSE 'Unknown Item Type'
+    END AS item_name,
+    chg.chrgdesc AS account_type,
+    stck.lotno AS lot_number,
+    stck.stock AS stock_balance,
+    stck.purchase AS purchase_price,
+    stck.selling AS selling_price,
+    CASE
+    	WHEN stck.isActive = 'A' THEN 'Active'
+    	WHEN stck.isActive = 'I' THEN 'Inactive'
+    	ELSE 'No Status'
+   END AS isActiveStatus,
+    
+	CASE
+		WHEN stck.`expire` < CURDATE() AND stck.isActive = 'A' THEN 0 									-- EXPIRED
+      WHEN stck.`expire` BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1 	-- NEAR EXPIRE
+      WHEN stck.`expire` >= CURDATE() AND stck.isActive = 'I' THEN 3 								-- PULLOUT
+      WHEN stck.`expire` < CURDATE() AND stck.isActive = 'I' THEN 4 									-- EXPIRED/PULLOUT
+   	ELSE 2 -- GOOD
+   END AS trigger_order
+
+FROM hstockroom stck
+
+LEFT JOIN hsupplier sup
+    ON stck.suppcode = sup.suppcode
+
+LEFT JOIN hdmhdr h
+    ON stck.itemcode = h.dmdcomb
+
+LEFT JOIN hdruggrp dg
+    ON h.grpcode = dg.grpcode
+
+LEFT JOIN hgen g
+    ON dg.gencode = g.gencode
+
+LEFT JOIN (
+    SELECT DISTINCT cl2comb
+    FROM hclass2h
+) hc2
+    ON stck.itemcode = hc2.cl2comb
+
+LEFT JOIN (
+    SELECT
+        cl2comb,
+        MAX(cl2desc) AS cl2desc,
+        MAX(uomcode) AS uomcode
+    FROM hclass2
+    GROUP BY cl2comb
+) h2
+    ON h2.cl2comb = hc2.cl2comb
+    
+LEFT JOIN hcharge chg 
+    ON stck.account = chg.chrgcode
+    
+WHERE 1=1
+	AND stck.isActive IS NOT NULL AND stck.isActive != 'I'
+
+ORDER BY stck.dateadd DESC;

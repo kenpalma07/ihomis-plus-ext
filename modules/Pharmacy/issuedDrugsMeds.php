@@ -90,6 +90,7 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
                 <tr>
                     <th>ORDER DATE</th>
                     <th>DATE ISSUED</th>
+                    <th>TURNAROUND TIME</th>
                     <th>LOT NUMBER</th>
                     <th>DRUG/MEDICINE</th>
                     <th>HPERCODE</th>

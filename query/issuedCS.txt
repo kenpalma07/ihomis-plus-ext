@@ -73,3 +73,5 @@ LEFT JOIN hpersonal hpl
     ON hrq.givenby = hpl.employeeid
 
 WHERE 1=1
+
+ORDER BY issued_date DESC

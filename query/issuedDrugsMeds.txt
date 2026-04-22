@@ -1,17 +1,21 @@
 SELECT
+    COALESCE(NULLIF(i.lotno, ''), 'No Lot Number') AS lot_number,
     CONCAT_WS(' ',
-        CONCAT_WS('', g.GENDESC,
-            CASE
+        CONCAT(
+            g.GENDESC,
+            CASE 
                 WHEN h.brandname IS NULL OR h.brandname = ''
                 THEN ''
                 ELSE CONCAT(' (', h.brandname, ')')
             END
         ),
-        COALESCE(h.dmdnost,''),
-        COALESCE(h.strecode,''),
-        COALESCE(h.formcode,'')
+        COALESCE(h.dmdnost, ''),
+        COALESCE(h.strecode, ''),
+        COALESCE(h.formcode, '')
     ) AS drug_description,
-	p.hpercode AS hpercode,
+
+    p.hpercode,
+
     CONCAT(
         p.patlast, ', ',
         p.patfirst,
@@ -25,14 +29,15 @@ SELECT
         END
     ) AS patient,
 
-    SUM(i.qty) AS quantity_issued,
-
-    IFNULL(SUM(r.qty),0) AS quantity_returned,
+    i.qty AS quantity_issued,
+    IFNULL(r.qty_returned,0) AS quantity_returned,
 
     CASE
-        WHEN rx.status = 'R' THEN 'Prescription Only'
-        ELSE 'Order'
-    END AS order_type,
+    	WHEN hx.estatus = 'R' THEN 'Prescription Only'
+    	ELSE 'Order'
+	 END AS order_type,
+
+    chg.chrgdesc AS account_type,
 
     CONCAT(
         hp.lastname, ', ',
@@ -45,107 +50,42 @@ SELECT
     ) AS issued_by,
 
     i.issuedte AS date_issued,
-    i.lotno AS lot_number
+    hx.dodate AS order_date,
+    CONCAT(
+        FLOOR(TIMESTAMPDIFF(SECOND, hx.dodate, i.issuedte) / 86400),
+        ' days - ',
+        SEC_TO_TIME(
+            MOD(
+                TIMESTAMPDIFF(SECOND, hx.dodate, i.issuedte), 86400
+            )
+        )
+    ) AS turnaround_time
 
 FROM hrxoissue i
 
-LEFT JOIN hrxoreturn r
+LEFT JOIN (
+    SELECT docointkey, dmdcomb, dmdctr, SUM(qty) AS qty_returned
+    FROM hrxoreturn
+    GROUP BY docointkey,dmdcomb,dmdctr
+) r
     ON i.docointkey = r.docointkey
     AND i.dmdcomb = r.dmdcomb
     AND i.dmdctr = r.dmdctr
 
-LEFT JOIN hdmhdr h
+-- ✅ FIXED JOIN
+LEFT JOIN hdmhdr h 
     ON i.dmdcomb = h.dmdcomb
+    AND i.dmdctr = h.dmdctr
 
-LEFT JOIN hdruggrp dg
-    ON h.grpcode = dg.grpcode
+LEFT JOIN hdruggrp dg ON h.grpcode = dg.grpcode
+LEFT JOIN hgen g ON dg.gencode = g.gencode
 
-LEFT JOIN hgen g
-    ON dg.gencode = g.gencode
+LEFT JOIN hcharge chg ON i.chrgcode = chg.chrgcode
 
-LEFT JOIN hrxissue rx
-    ON i.dmdcomb = rx.dmdcomb
-    AND i.dmdctr = rx.dmdctr
-    AND i.lotno = rx.lotno
+LEFT JOIN hperson p ON i.hpercode = p.hpercode
+LEFT JOIN hpersonal hp ON hp.employeeid = i.issuedby
+LEFT JOIN hrxo hx ON i.docointkey = hx.docointkey
 
-LEFT JOIN hperson p
-    ON i.hpercode = p.hpercode
+WHERE 1=1
 
-LEFT JOIN hpersonal hp
-    ON hp.employeeid = COALESCE(rx.issuedby, i.issuedby)
-    
-WHERE i.lotno IS NOT NULL AND i.lotno != ''
-
-GROUP BY
-    g.GENDESC,
-    h.brandname,
-    h.dmdnost,
-    h.strecode,
-    h.formcode,
-    p.hpercode,
-    p.patlast,
-    p.patfirst,
-    p.patsuffix,
-    p.patmiddle,
-    rx.status,
-    hp.lastname,
-    hp.firstname,
-    hp.middlename,
-    i.issuedte,
-    i.lotno;
-
-
-
--- Need to revise
-SELECT
-	hr.docointkey AS id,
-	hx.dodate AS order_date,
-	hr.issuedte AS issued_date,
-	hr.pcchrgcod AS chargeslip,
-	hr.hpercode AS hpercode,
-	CONCAT(
-        p.patlast, ', ',
-        p.patfirst,
-        CASE
-            WHEN p.patsuffix IS NULL OR p.patsuffix IN ('NOTAP','N/A') THEN ''
-            ELSE CONCAT(' ', p.patsuffix)
-        END,
-        CASE
-            WHEN p.patmiddle IS NULL OR p.patmiddle IN ('','N/A') THEN ''
-            ELSE CONCAT(', ', p.patmiddle)
-        END
-    ) AS patient,
-    hr.dmdcomb AS dmdcomb,
-    CONCAT_WS(' ',
-      COALESCE(hg.GENDESC,''),
-    	COALESCE(hd.dmdnost,''),
-      COALESCE(hd.strecode,''),
-      COALESCE(hd.formcode,'')
-    ) AS supply_name,
-    hr.qty AS quantity,
-    hre.qty AS return_value
-    -- hd.dmdstat AS dmd_status
-
-FROM hrxoissue hr
-
-LEFT JOIN hrxo hx
-	ON hr.docointkey = hx.docointkey
-	
-LEFT JOIN hperson p
-	ON hr.hpercode = p.hpercode
-
-LEFT JOIN hdmhdr hd
-	ON hr.dmdcomb = hd.dmdcomb
-	-- AND (hd.dmdstat = 'A' OR hd.dmdstat IS NULL)
-	
-LEFT JOIN hdruggrp hdr
-	ON hd.grpcode = hdr.grpcode
-	
-LEFT JOIN hgen hg
-	ON hdr.gencode = hg.gencode
-	
-LEFT JOIN hrxoreturn hre
-	ON hr.docointkey = hre.docointkey
--- ORDER BY dmd_status ASC
--- WHERE hr.hpercode = "000000000014488"
-GROUP BY id
+ORDER BY i.issuedte DESC;

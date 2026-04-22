@@ -100,15 +100,18 @@ echo "<tr>
 
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     echo "<tr>";
-    echo "<td>" . htmlspecialchars($row['hpercode']) . "</td>";
+
+    // ✅ FIX: preserve leading zeros
+    echo "<td style='mso-number-format:\"\\@\";'>" . htmlspecialchars($row['hpercode']) . "</td>";
+
     echo "<td>" . htmlspecialchars($row['patient']) . "</td>";
     echo "<td>" . htmlspecialchars($row['birthdate']) . "</td>";
     echo "<td>" . htmlspecialchars($row['registration_date']) . "</td>";
     echo "<td>" . htmlspecialchars($row['discharged_date']) . "</td>";
     echo "<td>" . htmlspecialchars($row['turnaround_dhms']) . "</td>";
     echo "<td>" . htmlspecialchars($row['discharge_by']) . "</td>";
+
     echo "</tr>";
 }
 
 echo "</table>";
-?>

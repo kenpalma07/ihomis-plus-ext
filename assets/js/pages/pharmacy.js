@@ -51,7 +51,7 @@ function initInventoryTable() {
 				[5, 10, 15, 50, 100, -1],
 				[5, 10, 15, 50, 100, "All"],
 			],
-			order: [[0, "asc"]],
+			order: [[6, "desc"]],
 			scrollX: true,
 			dom:
 				"<'row px-md-1 mb-2'<'col-md-2'l><'col-md-4'B><'col-md-6'f>>" +
@@ -451,6 +451,8 @@ function initPulledOutDMTable() {
 	}
 }
 
+// ----------------------------- ISSUED TABLE -----------------------------
+
 function initIssuedDMTable() {
 	var issuedTable = null;
 	let container = $("#issuedFilters");
@@ -514,6 +516,9 @@ function initIssuedDMTable() {
 					data: "date_issued",
 				},
 				{
+					data: "turnaround_time",
+				},
+				{
 					data: "lot_number",
 				},
 				{
@@ -543,7 +548,7 @@ function initIssuedDMTable() {
 			],
 			createdRow: function (row, data) {
 				if (data.lot_number === "No Lot Number") {
-					$("td:eq(2)", row).addClass("text-danger fw-bold");
+					$("td:eq(3)", row).addClass("text-danger fw-bold");
 				}
 			},
 		});

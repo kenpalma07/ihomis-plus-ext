@@ -206,7 +206,7 @@ $viewDashboard = ($currentPage == 'viewDashboard');
                         <li class="nav-item">
                             <a class="nav-link text-white <?= $inventoryStockRoom ? 'active' : '' ?>"
                                 href="index.php?page=inventoryStockRoom">
-                                Inventory of Stock Room
+                                Inventory of Items
                             </a>
                         </li>
                     </ul>

@@ -5,6 +5,11 @@ $startDate = $_GET['startDate'] ?? date('Y-01-01');
 $endDate   = $_GET['endDate'] ?? date('Y-m-d');
 ?>
 
+<div id="stockInventoryFilters"
+	data-start="<?= $startDate ?? '' ?>"
+	data-end="<?= $endDate ?? '' ?>">
+</div>
+
 <nav class="navbar navbar-light bg-success sticky-top flex-md-nowrap p-2 shadow">
 	<button class="navbar-toggler d-md-none collapsed"
 		type="button"
@@ -91,4 +96,28 @@ $endDate   = $_GET['endDate'] ?? date('Y-m-d');
 			</a>
 		</div>
 	</form>
+</div>
+
+<div class="px-md-1">
+	<div class="table-container">
+		<table id="stockInventoryTable" class="table table-striped table-bordered nowrap px-md-1" style="width:100%">
+			<thead class="table-success">
+				<tr>
+					<th>ENTRY DATE</th>
+					<th>EXPIRY DATE</th>
+					<th>STATUS</th>
+					<th>INVOICE/REFNO</th>
+					<th>SUPPLIER</th>
+					<th>ITEM NAME</th>
+					<th>ACCOUNT</th>
+					<th>LOT NUMBER</th>
+					<th>STOCK</th>
+					<th>PURCHASE</th>
+					<th>SELLING</th>
+					<th>ACTION</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		</table>
+	</div>
 </div>

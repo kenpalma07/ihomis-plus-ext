@@ -121,6 +121,33 @@ function loadInventory($pdo)
         $countStmt->execute($params);
         $total = $countStmt->fetchColumn();
 
+        $columns = [
+            0 => 'lot_number',
+            1 => 'drug_description',
+            2 => 'stock_balance',
+            3 => 'beg_balance',
+            4 => 'total_dispensed',
+            5 => 'selling_price',
+            6 => 'entry_date',
+            7 => 'expiration_date',
+            8 => 'account_type',
+            9 => 'status',
+        ];
+
+        $orderColumnIndex = $_POST['order'][0]['column'] ?? 0;
+        $orderDir = strtolower($_POST['order'][0]['dir'] ?? 'asc');
+        $orderDir = $orderDir === 'desc' ? 'DESC' : 'ASC';
+
+        $orderColumn = $columns[$orderColumnIndex] ?? 'entry_date';
+
+        // ✅ Default secondary sort (latest first)
+        $secondarySort = "entry_date DESC";
+
+        // If user clicks another column → override
+        if (isset($_POST['order'])) {
+            $secondarySort = "$orderColumn $orderDir";
+        }
+
         /* =========================
            MAIN DATA QUERY
         ========================= */
@@ -170,7 +197,8 @@ function loadInventory($pdo)
 
             $baseFrom
             $where
-            ORDER BY trigger_order ASC, hp.expiry ASC
+            
+            ORDER BY trigger_order ASC, $secondarySort
         ";
 
         // LIMIT
@@ -427,7 +455,16 @@ function loadIssued($pdo)
                 ) AS issued_by,
 
                 i.issuedte AS date_issued,
-                hx.dodate AS order_date
+                hx.dodate AS order_date,
+                CONCAT(
+                    FLOOR(TIMESTAMPDIFF(SECOND, hx.dodate, i.issuedte) / 86400),
+                    ' days - ',
+                    SEC_TO_TIME(
+                        MOD(
+                            TIMESTAMPDIFF(SECOND, hx.dodate, i.issuedte), 86400
+                        )
+                    )
+                ) AS turnaround_time
 
             $baseFrom
             $where

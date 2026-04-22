@@ -95,73 +95,83 @@ function loadCSInventory($pdo)
         $total = $countStmt->fetchColumn();
 
         $columns = [
-            0 => 'hc2.itemcode',
-            1 => 'h2.cl2desc',
-            2 => 'hc2.stockbal',
-            3 => 'hc2.begbal',
-            4 => '(hc2.begbal - hc2.stockbal)',
-            5 => 'hc2.cl2retprc',
-            6 => 'hc2.cl2dteas',
-            7 => 'hc2.expiry',
-            8 => 'hc2.cl2dtmd',
-            9 => 'chg.chrgdesc',
-            10 => 'trigger_order',
-            11 => 'hc2.stockloc',
-            12 => 'hc2.remarks'
+            0 => 'lot_number',
+            1 => 'supply_name',
+            2 => 'stock_balance',
+            3 => 'beg_balance',
+            4 => 'total_dispensed',
+            5 => 'selling_price',
+            6 => 'entry_date',
+            7 => 'expiry_date',
+            8 => 'date_modified',
+            9 => 'account_type',
+            10 => 'status',
+            11 => 'cost_center',
+            12 => 'cs_remarks'
         ];
 
         $orderColumnIndex = $_POST['order'][0]['column'] ?? 0;
-        $orderDir = strtolower($_POST['order'][0]['dir'] ?? 'asc');
-        $orderDir = $orderDir === 'desc' ? 'DESC' : 'ASC';
+        $orderDir = strtolower($_POST['order'][0]['dir'] ?? 'desc');
+        $orderDir = $orderDir === 'asc' ? 'ASC' : 'DESC';
 
-        $orderColumn = $columns[$orderColumnIndex] ?? 'hc2.itemcode';
+        $orderColumn = $columns[$orderColumnIndex] ?? 'entry_date';
+
+        // ✅ DEFAULT: latest first
+        $secondarySort = "entry_date DESC";
+
+        // ✅ If user sorts → override
+        if (isset($_POST['order'])) {
+            $secondarySort = "$orderColumn $orderDir";
+        }
 
         $sql = "
-            SELECT
-                COALESCE(NULLIF(hc2.itemcode, ''), 'No Lot Number') AS lot_number,
+            SELECT * FROM (
+                SELECT
+                    COALESCE(NULLIF(hc2.itemcode, ''), 'No Lot Number') AS lot_number,
+                    CONCAT_WS(' ', h2.cl2desc, h2.uomcode) AS supply_name,
 
-                CONCAT_WS(' ', h2.cl2desc, h2.uomcode) AS supply_name,
+                    hc2.cl2dtmd,
+                    hc2.itemcode,
 
-                hc2.cl2dtmd,
-                hc2.itemcode,
+                    CASE 
+                        WHEN hc2.stockbal IS NULL OR hc2.stockbal = '0' THEN 'No Stock Balance'
+                        ELSE hc2.stockbal
+                    END AS stock_balance,
 
-                CASE 
-                    WHEN hc2.stockbal IS NULL OR hc2.stockbal = '0' THEN 'No Stock Balance'
-                    ELSE hc2.stockbal
-                END AS stock_balance,
-                hc2.begbal AS beg_balance,
-                (hc2.begbal - hc2.stockbal) AS total_dispensed,
-                
-                COALESCE(NULLIF(hc2.cl2retprc, ''), 'No Selling Price') AS selling_price,
-                
-                hc2.cl2dteas AS entry_date,
-                hc2.expiry AS expiry_date,
-                hc2.cl2dtmd AS date_modified,
-                chg.chrgdesc AS account_type,
+                    hc2.begbal AS beg_balance,
+                    (hc2.begbal - hc2.stockbal) AS total_dispensed,
+                    
+                    COALESCE(NULLIF(hc2.cl2retprc, ''), 'No Selling Price') AS selling_price,
+                    
+                    hc2.cl2dteas AS entry_date,
+                    hc2.expiry AS expiry_date,
+                    hc2.cl2dtmd AS date_modified,
+                    chg.chrgdesc AS account_type,
 
-                CASE
-                    WHEN hc2.expiry < CURDATE() AND hc2.isActive = 'N' THEN 'EXPIRED/PULLOUT'
-                    WHEN hc2.expiry < CURDATE() THEN 'EXPIRED'
-                    WHEN hc2.expiry >= CURDATE() AND hc2.isActive = 'N' THEN 'PULLOUT'
-                    WHEN hc2.expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'NEAR EXPIRE'
-                    ELSE 'GOOD'
-                END AS status,
+                    CASE
+                        WHEN hc2.expiry < CURDATE() AND hc2.isActive = 'N' THEN 'EXPIRED/PULLOUT'
+                        WHEN hc2.expiry < CURDATE() THEN 'EXPIRED'
+                        WHEN hc2.expiry >= CURDATE() AND hc2.isActive = 'N' THEN 'PULLOUT'
+                        WHEN hc2.expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'NEAR EXPIRE'
+                        ELSE 'GOOD'
+                    END AS status,
 
-                CASE
-                    WHEN hc2.expiry < CURDATE() AND hc2.isActive = 'Y' THEN 0
-                    WHEN hc2.expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1
-                    WHEN hc2.expiry >= CURDATE() AND hc2.isActive = 'N' THEN 3
-                    WHEN hc2.expiry < CURDATE() AND hc2.isActive = 'N' THEN 4
-                    ELSE 2
-                END AS trigger_order,
+                    CASE
+                        WHEN hc2.expiry < CURDATE() AND hc2.isActive = 'Y' THEN 0
+                        WHEN hc2.expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1
+                        WHEN hc2.expiry >= CURDATE() AND hc2.isActive = 'N' THEN 3
+                        WHEN hc2.expiry < CURDATE() AND hc2.isActive = 'N' THEN 4
+                        ELSE 2
+                    END AS trigger_order,
 
-                hc2.stockloc AS cost_center,
-                hc2.remarks AS cs_remarks,
-                hc2.delintkey AS id
+                    hc2.stockloc AS cost_center,
+                    hc2.remarks AS cs_remarks,
+                    hc2.delintkey AS id
 
-            $baseFrom
-            $where
-            ORDER BY $orderColumn $orderDir
+                $baseFrom
+                $where
+            ) AS t
+            ORDER BY trigger_order ASC, $secondarySort
         ";
 
         if ($length != -1) {

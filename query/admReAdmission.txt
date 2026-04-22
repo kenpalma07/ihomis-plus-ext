@@ -1,0 +1,48 @@
+SET @startDate = '2026-01-01';
+SET @endDate = CURDATE();
+
+SELECT
+      COUNT(*) AS total_admissions,
+
+            SUM(CASE 
+                WHEN disdate IS NOT NULL 
+                AND disdate BETWEEN @startDate AND @endDate
+                THEN 1 ELSE 0 
+            END) AS total_discharges,
+
+            SUM(CASE 
+                WHEN disdate IS NULL 
+                THEN 1 ELSE 0 
+            END) AS current_inpatients,
+
+            SUM(CASE 
+                WHEN newold = 'N' 
+                AND admdate BETWEEN @startDate AND @endDate
+                THEN 1 ELSE 0 
+            END) AS new_patients,
+
+            SUM(CASE 
+                WHEN newold = 'O' 
+                AND admdate BETWEEN @startDate AND @endDate
+                THEN 1 ELSE 0 
+            END) AS old_patients,
+
+            (
+                SELECT COUNT(DISTINCT h1.hpercode)
+                FROM hadmlog h1
+                JOIN hadmlog h2 
+                    ON h1.hpercode = h2.hpercode
+                    AND h2.admdate > h1.disdate
+                WHERE h1.disdate BETWEEN @startDate AND @endDate
+            ) AS readmitted_patients,
+
+            SUM(CASE 
+                WHEN pexpireddate IS NOT NULL 
+                AND dispcode = 'DIEDD'
+                AND pexpireddate >= @startDate
+                AND pexpireddate < DATE_ADD(@endDate, INTERVAL 1 DAY)
+                THEN 1 ELSE 0 
+            END) AS total_deaths
+
+        FROM hadmlog
+        WHERE admdate BETWEEN @startDate AND @endDate

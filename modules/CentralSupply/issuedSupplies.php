@@ -5,6 +5,11 @@ $startDate = $_GET['startDate'] ?? date('Y-m-d');
 $endDate   = $_GET['endDate'] ?? date('Y-m-d');
 ?>
 
+<div id="csIssuedTable"
+    data-start="<?= $startDate ?? '' ?>"
+    data-end="<?= $endDate ?? '' ?>">
+</div>
+
 <nav class="navbar navbar-light bg-success sticky-top flex-md-nowrap p-2 shadow">
     <button class="navbar-toggler d-md-none collapsed"
         type="button"
