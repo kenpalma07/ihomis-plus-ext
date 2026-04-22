@@ -290,7 +290,8 @@ function loadIssued($pdo)
         /* =========================
            WHERE CONDITIONS
         ========================= */
-        $where = "WHERE 1=1";
+        $where = "WHERE 1=1
+            AND i.qty > 0";
         $params = [];
 
         // ✅ DATE FILTER
