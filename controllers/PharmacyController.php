@@ -291,7 +291,7 @@ function loadIssued($pdo)
            WHERE CONDITIONS
         ========================= */
         $where = "WHERE 1=1
-            AND i.qty > 0";
+            AND i.qty IS NOT NULL AND i.qty > 0";
         $params = [];
 
         // ✅ DATE FILTER

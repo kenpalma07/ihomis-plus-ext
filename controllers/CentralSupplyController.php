@@ -576,7 +576,9 @@ function loadCSIssued($pdo)
         $endDate   = $_POST['endDate'] ?? '';
         $search = $_POST['search']['value'] ?? '';
 
-        $where = "WHERE 1=1";
+        $where = "WHERE 1=1
+            AND hrq.qty IS NOT NULL AND hrq.qty > 0
+        ";
         $params = [];
 
         if (!empty($startDate) && !empty($endDate)) {
