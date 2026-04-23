@@ -335,14 +335,6 @@ function loadIssued($pdo)
             OR i.qty LIKE :search
             OR IFNULL(r.qty_returned,0) LIKE :search
 
-            -- Order type
-            OR (
-                CASE
-                    WHEN hx.status = 'R' THEN 'Prescription Only'
-                    ELSE 'Order'
-                END
-            ) LIKE :search
-
             -- Issued by
             OR CONCAT(
                 hp.lastname, ', ',
