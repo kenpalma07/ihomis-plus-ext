@@ -338,7 +338,7 @@ function loadIssued($pdo)
             -- Order type
             OR (
                 CASE
-                    WHEN rx.status = 'R' THEN 'Prescription Only'
+                    WHEN hx.status = 'R' THEN 'Prescription Only'
                     ELSE 'Order'
                 END
             ) LIKE :search

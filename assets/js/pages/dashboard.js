@@ -7,26 +7,21 @@ function initDashboard() {
 	const startEl = document.getElementById("start_date");
 	const endEl = document.getElementById("end_date");
 
-	// Initial load
 	loadDashboard();
 
-	// Button click
 	if (filterBtn) {
-		filterBtn.addEventListener("click", () => {
-			loadDashboard();
-		});
+		filterBtn.addEventListener("click", loadDashboard);
 	}
 
-	// Optional: press ENTER to filter
 	[startEl, endEl].forEach((input) => {
-		if (input) {
-			input.addEventListener("keypress", (e) => {
-				if (e.key === "Enter") {
-					e.preventDefault();
-					loadDashboard();
-				}
-			});
-		}
+		if (!input) return;
+
+		input.addEventListener("keypress", (e) => {
+			if (e.key === "Enter") {
+				e.preventDefault();
+				loadDashboard();
+			}
+		});
 	});
 }
 
@@ -35,33 +30,37 @@ async function loadDashboard() {
 	const end = document.getElementById("end_date")?.value;
 	const btn = document.getElementById("filterBtn");
 
-	if (!start || !end) {
-		console.warn("Start or End date missing");
-		return;
-	}
+	if (!start || !end) return;
 
 	try {
-		// 🔄 UI loading state
 		if (btn) {
 			btn.disabled = true;
 			btn.innerHTML = "Loading...";
 		}
 
+		const params = new URLSearchParams({
+			action: "loadDashboard",
+			start_date: start,
+			end_date: end,
+		});
+
 		const res = await fetch(
-			`../../Controllers/DashboardController.php?action=loadDashboard&start_date=${encodeURIComponent(start)}&end_date=${encodeURIComponent(end)}`,
+			`../../Controllers/DashboardController.php?${params.toString()}`,
 		);
 
-		const result = await res.json();
+		const text = await res.text();
+		// console.log(text);
+
+		const result = JSON.parse(text);
 
 		if (result.status === "success") {
 			renderDashboard(result.data);
 		} else {
-			console.error("Server error:", result.message);
+			console.error(result.message);
 		}
 	} catch (err) {
-		console.error("Fetch error:", err);
+		console.error(err);
 	} finally {
-		// 🔁 Restore button
 		if (btn) {
 			btn.disabled = false;
 			btn.innerHTML = "Filter";
@@ -85,6 +84,14 @@ function renderDashboard(data) {
 	setValue("er_old_patients", data.er_old_patients);
 	setValue("er_readmitted_patients", data.er_readmitted_patients);
 	setValue("er_readmission_rate", data.er_readmission_rate + "%");
+	setValue("total_opd_visits", data.total_opd_visits);
+	setValue("current_opd_patients", data.current_opd_patients);
+	setValue("total_opd_discharges", data.total_opd_discharges);
+	setValue("new_opd_patients", data.new_opd_patients);
+	setValue("old_opd_patients", data.old_opd_patients);
+	setValue("readmitted_opd_patients", data.readmitted_opd_patients);
+	setValue("total_opd_deaths", data.total_opd_deaths);
+	setValue("readmission_opd_rate", data.readmission_opd_rate + "%");
 
 	// Special handling for percentage
 	const rate = data.readmission_rate ?? 0;
@@ -102,4 +109,83 @@ function setValue(id, value) {
 	} else {
 		el.textContent = value;
 	}
+}
+
+let viewPatient = null;
+
+$(document).on("click", ".dashboard-card", function () {
+	const metric = $(this).data("metric");
+	const type = $(this).data("type");
+
+	$("#patientModal").modal("show");
+
+	loadPatientTable(metric, type);
+});
+
+function loadPatientTable(metric, type) {
+	const start = $("#start_date").val();
+	const end = $("#end_date").val();
+
+	// wait modal to fully render
+	setTimeout(() => {
+		if ($.fn.DataTable.isDataTable("#viewPatient")) {
+			$("#viewPatient").DataTable().destroy();
+		}
+
+		viewPatient = $("#viewPatient").DataTable({
+			processing: true,
+			serverSide: true,
+			autoWidth: false,
+			ajax: {
+				url: "Controllers/DashboardController.php",
+				type: "POST",
+				data: function (d) {
+					d.action = "getPatientsByMetric";
+					d.metric = metric;
+					d.type = type;
+					d.start_date = start;
+					d.end_date = end;
+				},
+			},
+			pageLength: 10,
+			order: [[2, "desc"]],
+			lengthMenu: [
+				[5, 10, 15, 50, 100, -1],
+				[5, 10, 15, 50, 100, "All"],
+			],
+			scrollX: true,
+			dom:
+				"<'row px-md-1 mb-2'<'col-md-2'l><'col-md-4'B><'col-md-6'f>>" +
+				"<'row'<'col-12'tr>>" +
+				"<'row px-md-4'<'col-md-5'i><'col-md-7'p>>",
+			buttons: [
+				{
+					extend: "excelHtml5",
+					text: "Excel",
+					className: "btn btn-success btn-sm",
+					title: "Patient List",
+					exportOptions: {
+						columns: ":visible",
+					},
+				},
+				{
+					extend: "csvHtml5",
+					text: "CSV",
+					className: "btn btn-primary btn-sm",
+					title: "Patient List",
+				},
+				{
+					extend: "print",
+					text: "Print",
+					className: "btn btn-secondary btn-sm",
+					title: "Patient List",
+				},
+			],
+			columns: [
+				{ data: "hpercode" },
+				{ data: "patient" },
+				{ data: "date_registered" },
+			],
+		});
+	}, 150);
 }
