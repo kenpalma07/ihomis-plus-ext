@@ -460,7 +460,7 @@ function getPatientsByMetric($pdo)
         ";
     } else if ($type === 'outpatient') {
         $params = [];
-        $where = " WHERE opd.opddate IS NOT NULL ";
+        $where = " WHERE 1=1 ";
 
         // ✅ STANDARD DATE FILTER
         if (!empty($startDate)) {
@@ -476,7 +476,6 @@ function getPatientsByMetric($pdo)
         // ✅ CURRENT OPD
         if ($metric === 'current_opd_patients') {
             $where .= " AND opd.opddtedis IS NULL 
-                AND opddate BETWEEN :startDate AND :endDate
             ";
         }
 
