@@ -516,7 +516,7 @@ function getPatientsByMetric($pdo)
                         ELSE CONCAT(', ', hp.patmiddle)
                     END
                 ) AS patient,
-                opd.opddate AS date_registered
+                (opd.opddate) AS date_registered
             FROM hopdlog opd
             LEFT JOIN hperson hp ON opd.hpercode = hp.hpercode
             $where
