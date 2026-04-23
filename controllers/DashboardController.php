@@ -477,8 +477,6 @@ function getPatientsByMetric($pdo)
         if ($metric === 'current_opd_patients') {
             $where .= " AND opd.opddtedis IS NULL 
                 AND opddate BETWEEN :startDate AND :endDate
-                ORDER BY date_registered DESC
-                LIMIT :start, :length
             ";
         }
 
@@ -495,10 +493,6 @@ function getPatientsByMetric($pdo)
                     WHERE h2.hpercode = opd.hpercode
                     AND h2.opddate > opd.opddtedis
                 )
-                
-                GROUP BY opd.hpercode
-                ORDER BY date_registered DESC
-                LIMIT :start, :length
             ";
         }
 
@@ -520,7 +514,9 @@ function getPatientsByMetric($pdo)
             FROM hopdlog opd
             LEFT JOIN hperson hp ON opd.hpercode = hp.hpercode
             $where
-            
+            GROUP BY opd.hpercode
+            ORDER BY date_registered DESC
+            LIMIT :start, :length
         ";
     }
 
