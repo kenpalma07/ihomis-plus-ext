@@ -100,6 +100,9 @@ function initInventoryTable() {
 					data: "selling_price",
 				},
 				{
+					data: "unit_price",
+				},
+				{
 					data: "entry_date",
 				},
 				{
@@ -131,12 +134,12 @@ function initInventoryTable() {
 			createdRow: function (row, data) {
 				if (data.status === "EXPIRED") {
 					$(row).addClass("table-danger");
-					$("td:eq(9)", row).addClass("text-danger fw-bold");
+					$("td:eq(10)", row).addClass("text-danger fw-bold");
 				} else if (data.status === "NEAR EXPIRE") {
 					$(row).addClass("table-warning");
-					$("td:eq(9)", row).addClass("text-warning fw-bold");
+					$("td:eq(10)", row).addClass("text-warning fw-bold");
 				} else {
-					$("td:eq(9)", row).addClass("text-success fw-bold");
+					$("td:eq(10)", row).addClass("text-success fw-bold");
 				}
 
 				if (data.stock_balance === "No Stock Balance") {
@@ -145,6 +148,10 @@ function initInventoryTable() {
 
 				if (data.selling_price === "No Selling Price") {
 					$("td:eq(5)", row).addClass("text-danger fw-bold");
+				}
+
+				if (data.unit_price === "No Unit Price") {
+					$("td:eq(6)", row).addClass("text-danger fw-bold");
 				}
 			},
 		});

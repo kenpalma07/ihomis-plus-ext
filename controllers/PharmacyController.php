@@ -77,6 +77,7 @@ function loadInventory($pdo)
                     END  
                 ) LIKE :search
                 OR COALESCE(NULLIF(hp.dmselprice, ''), 'No Selling Price') LIKE :search
+                OR COALESCE(NULLIF(hp.dmduprice, ''), 'No Unit Price') LIKE :search
                 OR DATE(hp.dmdprdte) LIKE :search
                 OR DATE(hp.expiry) LIKE :search
                 OR hp.dmhdrsub LIKE :search
@@ -128,10 +129,11 @@ function loadInventory($pdo)
             3 => 'beg_balance',
             4 => 'total_dispensed',
             5 => 'selling_price',
-            6 => 'entry_date',
-            7 => 'expiration_date',
-            8 => 'account_type',
-            9 => 'status',
+            6 => 'unit_price',
+            7 => 'entry_date',
+            8 => 'expiration_date',
+            9 => 'account_type',
+            10 => 'status',
         ];
 
         $orderColumnIndex = $_POST['order'][0]['column'] ?? 0;
@@ -173,6 +175,7 @@ function loadInventory($pdo)
                 hp.begbal AS beg_balance,
                 (hp.begbal - hp.stockbal) AS total_dispensed,
                 COALESCE(NULLIF(hp.dmselprice, ''), 'No Selling Price') AS selling_price,
+                COALESCE(NULLIF(hp.dmduprice, ''), 'No Unit Price') AS unit_price,
                 hp.dmdprdte AS entry_date,
                 COALESCE(NULLIF(hp.expiry, ''), 'No Expiration Date') AS expiration_date,
                 chg.chrgdesc AS account_type,

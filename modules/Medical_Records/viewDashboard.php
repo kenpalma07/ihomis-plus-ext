@@ -274,6 +274,7 @@ $pageTitle = "Dashboard";
                             <th>HPERCODE</th>
                             <th>PATIENT</th>
                             <th>DATE REGISTERED</th>
+                            <th hidden>DATE REGISTERED2</th>
                         </tr>
                     </thead>
                     <tbody></tbody>

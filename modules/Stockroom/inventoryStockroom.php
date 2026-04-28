@@ -1,8 +1,8 @@
 <?php
 $pageTitle = "Stockroom Inventory";
 
-$startDate = $_GET['startDate'] ?? date('Y-01-01');
-$endDate   = $_GET['endDate'] ?? date('Y-m-d');
+$startDate = $_GET['startDate'] ?? date('');
+$endDate   = $_GET['endDate'] ?? date('');
 ?>
 
 <div id="stockInventoryFilters"

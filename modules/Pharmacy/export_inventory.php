@@ -49,7 +49,8 @@ if (!empty($search)) {
         OR h.strecode LIKE :search
         OR h.formcode LIKE :search
         OR hp.stockbal LIKE :search
-        OR hp.dmselprice LIKE :search
+        OR COALESCE(NULLIF(hp.dmselprice, ''), 'No Selling Price') LIKE :search
+        OR COALESCE(NULLIF(hp.dmduprice, ''), 'No Unit Price') LIKE :search
         OR hp.dmdprdte LIKE :search
         OR hp.expiry LIKE :search
         OR hp.dmhdrsub LIKE :search
@@ -90,7 +91,8 @@ SELECT
     COALESCE(NULLIF(hp.stockbal, ''), 'No Stock Balance') AS stock_balance,
     hp.begbal AS beg_balance,
     (hp.begbal - hp.stockbal) AS total_dispensed,
-    hp.dmselprice AS selling_price,
+    COALESCE(NULLIF(hp.dmselprice, ''), 'No Selling Price') AS selling_price,
+    COALESCE(NULLIF(hp.dmduprice, ''), 'No Unit Price') AS unit_price,
     hp.dmdprdte AS entry_date,
     COALESCE(NULLIF(hp.expiry, ''), 'No Expiration Date') AS expiration_date,
     hp.dmhdrsub AS account_type,

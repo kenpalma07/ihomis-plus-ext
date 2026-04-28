@@ -8,6 +8,11 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<!-- <script src="assets/js/jquery-3.7.1.min.js"></script> -->
+<!-- <script src="assets/js/jquery.dataTables.min.js"></script> -->
+<!-- <script src="assets/js/dataTables.bootstrap5.min.js"></script> -->
+<!-- <script src="assets/css/dataTables.buttons.min.js"></script> -->
+
 <script src="/assets/js/pages/emergency.js"></script>
 <script src="/assets/js/pages/patient.js"></script>
 <script src="/assets/js/pages/laboratory.js"></script>

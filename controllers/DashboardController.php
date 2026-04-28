@@ -450,12 +450,13 @@ function getPatientsByMetric($pdo)
                         ELSE CONCAT(', ', hp.patmiddle)
                     END
                 ) AS patient,
-                MAX(adm.admdate) AS date_registered
+                MAX(adm.admdate) AS date_registered,
+                adm.admdate AS date_registered2
             FROM hadmlog adm
             LEFT JOIN hperson hp ON adm.hpercode = hp.hpercode
             $where
             GROUP BY adm.hpercode
-            ORDER BY date_registered DESC
+            ORDER BY date_registered2 DESC
             LIMIT :start, :length
         ";
     } else if ($type === 'outpatient') {
@@ -475,7 +476,7 @@ function getPatientsByMetric($pdo)
 
         // ✅ CURRENT OPD
         if ($metric === 'current_opd_patients') {
-            $where .= " AND opd.opddtedis IS NULL 
+            $where .= " AND opd.opddtedis IS NULL AND opd.opddisp IS NOT NULL
             ";
         }
 
