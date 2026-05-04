@@ -59,18 +59,18 @@ $pageTitle = "Dashboard";
                     "admission" => [
                         "current_inpatients",
                         "readmitted_patients",
-                        "total_deaths"
+                        // "total_deaths"
                     ],
                     "emergency" => [
                         "current_er_patients",
                         "er_readmitted_patients",
-                        "total_er_deaths"
+                        // "total_er_deaths"
 
                     ],
                     "outpatient" => [
                         "current_opd_patients",
                         "readmitted_opd_patients",
-                        "total_opd_deaths"
+                        // "total_opd_deaths"
                     ]
                 ];
 
@@ -133,18 +133,18 @@ $pageTitle = "Dashboard";
                         "admission" => [
                             "current_inpatients",
                             "readmitted_patients",
-                            "total_deaths"
+                            // "total_deaths"
                         ],
                         "emergency" => [
                             "current_er_patients",
                             "er_readmitted_patients",
-                            "total_er_deaths"
+                            // "total_er_deaths"
 
                         ],
                         "outpatient" => [
                             "current_opd_patients",
                             "readmitted_opd_patients",
-                            "total_opd_deaths"
+                            // "total_opd_deaths"
                         ]
                     ];
 
@@ -207,18 +207,18 @@ $pageTitle = "Dashboard";
                     "admission" => [
                         "current_inpatients",
                         "readmitted_patients",
-                        "total_deaths"
+                        // "total_deaths"
                     ],
                     "emergency" => [
                         "current_er_patients",
                         "er_readmitted_patients",
-                        "total_er_deaths"
+                        // "total_er_deaths"
 
                     ],
                     "outpatient" => [
                         "current_opd_patients",
                         "readmitted_opd_patients",
-                        "total_opd_deaths"
+                        // "total_opd_deaths"
                     ]
                 ];
 
@@ -274,7 +274,7 @@ $pageTitle = "Dashboard";
                             <th>HPERCODE</th>
                             <th>PATIENT</th>
                             <th>DATE REGISTERED</th>
-                            <th hidden>DATE REGISTERED2</th>
+                            <!-- <th>DATE REGISTERED2</th> -->
                         </tr>
                     </thead>
                     <tbody></tbody>

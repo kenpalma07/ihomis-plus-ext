@@ -25,7 +25,7 @@ $columns = [
     5 => 'hdocord.charged_date',
     6 => 'turnaround_dhms',
     7 => 'estatus',
-    //8 => 'encounter_status'
+    8 => 'encounter_status'
 ];
 
 $orderColumn = $columns[$orderColumnIndex] ?? 'hdocord.dodate';
@@ -41,6 +41,7 @@ LEFT JOIN henctr
     ON henctr.hpercode = hdocord.hpercode
     AND henctr.enccode = hdocord.enccode
 WHERE hprocm.costcenter = 'LABOR'
+-- AND hdocord.charged_date IS NOT NULL AND hdocord.charged_date != ''
 ";
 
 // Filters

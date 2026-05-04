@@ -451,7 +451,7 @@ function getPatientsByMetric($pdo)
                     END
                 ) AS patient,
                 MAX(adm.admdate) AS date_registered,
-                adm.admdate AS date_registered2
+                -- adm.admdate AS date_registered2
             FROM hadmlog adm
             LEFT JOIN hperson hp ON adm.hpercode = hp.hpercode
             $where

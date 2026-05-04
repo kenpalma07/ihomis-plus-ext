@@ -24,7 +24,7 @@ $search    = $_GET['search'] ?? '';
    WHERE CONDITIONS
 ========================= */
 $where = "WHERE 1=1
-            AND hc2.isActive = 'Y'
+            AND hc2.isActive IS NOT NULL AND hc2.isActive != 'N'
             ";
 
 $params = [];

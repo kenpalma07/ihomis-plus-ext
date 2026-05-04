@@ -185,7 +185,7 @@ function loadPatientTable(metric, type) {
 				{ data: "hpercode" },
 				{ data: "patient" },
 				{ data: "date_registered" },
-				{ data: "date_registered2", visible: false },
+				// { data: "date_registered2", visible: false },
 			],
 		});
 	}, 150);

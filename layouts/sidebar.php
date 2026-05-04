@@ -18,9 +18,10 @@ $inventorySupplies = ($currentPage == 'inventorySupplies');
 $issuedSupplies = ($currentPage == 'issuedSupplies');
 $pulledoutSupplies = ($currentPage == 'pulledoutSupplies');
 
-$stockRoomPages = ['inventoryStockRoom'];
+$stockRoomPages = ['inventoryStockRoom', 'issuedDMStockRoom'];
 $isStockRoomOpen = in_array($currentPage, $stockRoomPages);
 $inventoryStockRoom = ($currentPage == 'inventoryStockRoom');
+$issuedDMStockRoom = ($currentPage == 'issuedDMStockRoom');
 
 $medicalRecordPages = ['admissionLog', 'viewAdmissionLog', 'viewDashboard', 'erLog', 'viewERLog', 'opdLog', 'viewOPDLog'];
 $isMedicalRecordsOpen = in_array($currentPage, $medicalRecordPages);
@@ -193,7 +194,7 @@ $viewDashboard = ($currentPage == 'viewDashboard');
             </li>
 
             <!-- STOCKROOM -->
-             <li class="nav-item">
+            <li class="nav-item">
                 <a class="nav-link text-white d-flex justify-content-between align-items-center"
                     data-bs-toggle="collapse"
                     href="#stockRoomSubmenu"
@@ -207,6 +208,12 @@ $viewDashboard = ($currentPage == 'viewDashboard');
                             <a class="nav-link text-white <?= $inventoryStockRoom ? 'active' : '' ?>"
                                 href="index.php?page=inventoryStockRoom">
                                 Inventory of Items
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white <?= $issuedDMStockRoom ? 'active' : '' ?>"
+                                href="index.php?page=issuedDMStockRoom">
+                                Issued Drugs and Medicines to Pharmacy
                             </a>
                         </li>
                     </ul>
