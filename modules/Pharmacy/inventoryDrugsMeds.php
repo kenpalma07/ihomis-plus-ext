@@ -114,6 +114,11 @@ $endDate   = $_GET['endDate'] ?? date('');
                     <th>STOCK BALANCE</th>
                     <th>BEGINNING BALANCE</th>
                     <th>TOTAL DISPENSED</th>
+                    <th>TOTAL RETURNED</th>
+                    <th>NET DISPENSED</th>
+                    <th>ADJUSTMENT (ADDITION)</th>
+                    <th>ADJUSTMENT (DEDUCTION)</th>
+                    <th>EXPECTED ENDING BALANCE</th>
                     <th>SELLING PRICE</th>
                     <th>UNIT PRICE</th>
                     <th>ENTRY DATE</th>

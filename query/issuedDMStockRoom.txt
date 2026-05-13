@@ -1,0 +1,78 @@
+SELECT
+    hrxrq.dtereq AS order_date,
+    hrx.dteissue AS issued_date,
+
+    COALESCE(NULLIF(TRIM(hrx.lotno), ''), 'No Lot Number') AS lot_number,
+
+    TRIM(
+        CONCAT_WS(' ',
+            CONCAT(
+                COALESCE(g.GENDESC, ''),
+                CASE
+                    WHEN COALESCE(NULLIF(TRIM(h.brandname), ''), '') <> ''
+                    THEN CONCAT(' (', h.brandname, ')')
+                    ELSE ''
+                END
+            ),
+            NULLIF(TRIM(h.dmdnost), ''),
+            NULLIF(TRIM(h.strecode), ''),
+            NULLIF(TRIM(h.formcode), '')
+        )
+    ) AS drug_description,
+
+    hrxrq.qtyreq AS quantity_request,
+    hrx.issue_qty AS quantity_issued,
+    hrxrq.qtyrcv AS quantity_received,
+    
+    COALESCE(NULLIF(TRIM(hrx.locacode), 'PHARM'), 'Pharmacy') AS from_location,
+    
+
+    CASE
+        WHEN hrx.status IN ('S', 'R') THEN 'Served'
+        ELSE 'Unserved'
+    END AS `Status`,
+
+    CASE
+        WHEN hrx.status = 'R' THEN 'Received'
+        WHEN hrx.status = 'S' THEN 'Unserved'
+        ELSE 'Unknown'
+    END AS `Received`,
+
+    hrxrq.rxstatus,
+    hrxrq.phrxstatus,
+    CONCAT(
+     hp.lastname, ', ',
+     hp.firstname,
+     CASE
+         WHEN hp.middlename IS NULL OR hp.middlename = ''
+         THEN ''
+         ELSE CONCAT(' ', hp.middlename)
+     END
+ 	) AS issued_by,
+    hrx.control_id
+
+FROM hrxissue hrx
+
+INNER JOIN hrxrequest hrxrq
+    ON hrx.control_id = hrxrq.control_id
+
+    -- Only include fully issued/served requests
+    AND hrxrq.rxstatus = 'S'
+    AND hrxrq.phrxstatus IN ('S', 'U')
+
+LEFT JOIN hdmhdr h
+    ON hrx.dmdcomb = h.dmdcomb
+    AND hrx.dmdctr = h.dmdctr
+
+LEFT JOIN hdruggrp dg
+    ON h.grpcode = dg.grpcode
+
+LEFT JOIN hgen g
+    ON dg.gencode = g.gencode
+    
+LEFT JOIN hpersonal hp
+	ON hp.employeeid = hrx.issuedby
+
+WHERE hrx.status IN ('S', 'R')
+
+ORDER BY hrxrq.dtereq DESC, hrx.dteissue DESC;

@@ -261,3 +261,32 @@ $viewDashboard = ($currentPage == 'viewDashboard');
         </ul>
     </div>
 </nav>
+
+<style>
+    #sidebarMenu {
+        height: 100vh;
+        /* Full screen height */
+        overflow-y: auto;
+        /* Vertical scroll */
+        overflow-x: hidden;
+        /* Prevent horizontal scroll */
+        position: fixed;
+        /* Keeps sidebar fixed while page scrolls */
+        top: 0;
+        left: 0;
+    }
+
+    /* Optional: smoother scrollbar */
+    #sidebarMenu::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    #sidebarMenu::-webkit-scrollbar-thumb {
+        background-color: #6c757d;
+        border-radius: 10px;
+    }
+
+    #sidebarMenu::-webkit-scrollbar-track {
+        background: #343a40;
+    }
+</style>

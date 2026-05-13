@@ -450,13 +450,13 @@ function getPatientsByMetric($pdo)
                         ELSE CONCAT(', ', hp.patmiddle)
                     END
                 ) AS patient,
-                MAX(adm.admdate) AS date_registered,
+                MAX(adm.admdate) AS date_registered
                 -- adm.admdate AS date_registered2
             FROM hadmlog adm
             LEFT JOIN hperson hp ON adm.hpercode = hp.hpercode
             $where
             GROUP BY adm.hpercode
-            ORDER BY date_registered2 DESC
+            ORDER BY date_registered DESC
             LIMIT :start, :length
         ";
     } else if ($type === 'outpatient') {

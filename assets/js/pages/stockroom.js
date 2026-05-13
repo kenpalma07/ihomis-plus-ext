@@ -1,5 +1,6 @@
 $(document).ready(function () {
 	initStockRoomInventory();
+	initIssuedStockTable();
 });
 
 let stockTable = null;
@@ -143,5 +144,175 @@ function formatNumber(value) {
 	return parseFloat(value ?? 0).toLocaleString(undefined, {
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 2,
+	});
+}
+
+function initIssuedStockTable() {
+	var issuedDMSRTable = null;
+	let container = $("#issuedDMStockFilter");
+
+	if ($("#issuedDMSRTable").length) {
+		issuedDMSRTable = $("#issuedDMSRTable").DataTable({
+			processing: true,
+			serverSide: true,
+			ajax: {
+				url: "Controllers/StockRoomController.php",
+				type: "POST",
+				data: function (d) {
+					d.action = "issuedStocks";
+					d.startDate = $("#issuedStockStart").val() || null;
+					d.endDate = $("#issuedStockEnd").val() || null;
+				},
+				dataSrc: function (json) {
+					if (json.totals) {
+						$("#totalDrugs").text(json.totals.totalDrugs ?? 0);
+						$("#totalIssued").text(json.totals.totalIssued ?? 0);
+						$("#totalReceived").text(json.totals.totalReceived ?? 0);
+					}
+					return json.data;
+				},
+			},
+			pageLength: 10,
+			lengthMenu: [
+				[5, 10, 15, 50, 100, -1],
+				[5, 10, 15, 50, 100, "All"],
+			],
+			scrollX: true,
+			order: [[2, "desc"]],
+			language: {
+				processing:
+					'<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>',
+			},
+			dom:
+				"<'row px-md-1 mb-2'<'col-md-2'l><'col-md-4'B><'col-md-6'f>>" +
+				"<'row'<'col-12'tr>>" +
+				"<'row px-md-4'<'col-md-5'i><'col-md-7'p>>",
+			buttons: [
+				{
+					extend: "excelHtml5",
+					className: "btn btn-success",
+					title: "Issued Stock Room (Drugs and Medicines) Report",
+				},
+				{
+					extend: "csvHtml5",
+					className: "btn btn-primary",
+					title: "Issued Stock Room (Drugs and Medicines) Report",
+				},
+				{
+					extend: "print",
+					className: "btn btn-secondary",
+					title: "Issued Stock Room (Drugs and Medicines) Report",
+				},
+			],
+			columns: [
+				{
+					data: "control_id",
+				},
+				{
+					data: "order_date",
+				},
+				{
+					data: "issued_date",
+				},
+				{
+					data: "turnaround_dhms",
+				},
+				{
+					data: "lot_number",
+				},
+				{
+					data: "drug_description",
+				},
+				{
+					data: "quantity_request",
+				},
+				{
+					data: "quantity_issued",
+				},
+				{
+					data: "quantity_received",
+				},
+				{
+					data: "from_location",
+				},
+				{
+					data: "Status",
+				},
+				{
+					data: "Received",
+				},
+				{
+					data: "issued_by",
+				},
+			],
+			createdRow: function (row, data) {
+				if (data.quantity_received === "Not yet received") {
+					$("td:eq(8)", row).addClass("text-danger fw-bold");
+				}
+
+				if (data.Received === "Unserved") {
+					$("td:eq(11)", row)
+						.removeClass("bg-success bg-success-subtle text-success text-dark")
+						.addClass("bg-danger-subtle text-danger fw-bold");
+				} else {
+					$("td:eq(11)", row)
+						.removeClass("bg-danger text-white")
+						.addClass("bg-success-subtle text-success fw-bold");
+				}
+
+				if (data.Status === "Served") {
+					$("td:eq(10)", row)
+						.removeClass("bg-danger text-danger")
+						.addClass("bg-success-subtle text-success fw-bold");
+				}
+
+				if (data.from_location === "Pharmacy") {
+					$("td:eq(9)", row)
+						.removeClass("bg-danger text-danger")
+						.addClass("bg-info text-white fw-bold");
+				} else if (data.from_location === "Central Supply") {
+					$("td:eq(9)", row)
+						.removeClass("bg-danger text-danger")
+						.addClass("bg-secondary text-white fw-bold");
+				}
+			},
+			rowCallback: function (row, data) {
+				if (!data.turnaround_dhms) return;
+
+				let text = data.turnaround_dhms.toLowerCase();
+				let totalHours = 0;
+
+				let dayMatch = text.match(/(\d+)\s*day/);
+				if (dayMatch) totalHours += parseInt(dayMatch[1]) * 24;
+
+				let timeMatch = text.match(/(\d+):(\d+)(?::(\d+))?/);
+				if (timeMatch) {
+					let h = parseInt(timeMatch[1]) || 0;
+					let m = parseInt(timeMatch[2]) || 0;
+					let s = parseInt(timeMatch[3]) || 0;
+					totalHours += h + m / 60 + s / 3600;
+				}
+
+				if (totalHours > 8) {
+					$("td:eq(3)", row)
+						.removeClass("bg-success bg-success-subtle text-success text-dark")
+						.addClass("bg-danger-subtle text-danger fw-bold");
+				} else if (totalHours > 4) {
+					$("td:eq(3)", row)
+						.removeClass("bg-success bg-success-subtle text-success text-dark")
+						.addClass("bg-warning-subtle fw-bold");
+				}
+			},
+		});
+	}
+	// ✅ FILTER BUTTON
+
+	$("#filterDMIssuedStock").click(function () {
+		issuedDMSRTable.ajax.reload(); // ✅ FIXED
+	});
+	$("#resetDMIssuedStock").click(function () {
+		$("#issuedStockStart").val(container.data("start"));
+		$("#issuedStockEnd").val(container.data("end"));
+		issuedDMSRTable.ajax.reload(); // ✅ FIXED
 	});
 }

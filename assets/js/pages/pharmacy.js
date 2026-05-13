@@ -14,7 +14,7 @@ function initInventoryTable() {
 			processing: true,
 			serverSide: true,
 			ajax: {
-				url: "Controllers/PharmacyController.php",
+				url: "Controllers/PharmacyControllers.php",
 				type: "POST",
 				data: function (d) {
 					d.action = "inventory";
@@ -51,7 +51,7 @@ function initInventoryTable() {
 				[5, 10, 15, 50, 100, -1],
 				[5, 10, 15, 50, 100, "All"],
 			],
-			order: [[6, "desc"]],
+			order: [[12, "desc"]],
 			scrollX: true,
 			dom:
 				"<'row px-md-1 mb-2'<'col-md-2'l><'col-md-4'B><'col-md-6'f>>" +
@@ -97,6 +97,21 @@ function initInventoryTable() {
 					data: "total_dispensed",
 				},
 				{
+					data: "total_returned",
+				},
+				{
+					data: "net_dispensed",
+				},
+				{
+					data: "adjustment_addition",
+				},
+				{
+					data: "adjustment_deduction",
+				},
+				{
+					data: "calculated_expected_stock",
+				},
+				{
 					data: "selling_price",
 				},
 				{
@@ -134,12 +149,12 @@ function initInventoryTable() {
 			createdRow: function (row, data) {
 				if (data.status === "EXPIRED") {
 					$(row).addClass("table-danger");
-					$("td:eq(10)", row).addClass("text-danger fw-bold");
+					$("td:eq(15)", row).addClass("text-danger fw-bold");
 				} else if (data.status === "NEAR EXPIRE") {
 					$(row).addClass("table-warning");
-					$("td:eq(10)", row).addClass("text-warning fw-bold");
+					$("td:eq(15)", row).addClass("text-warning fw-bold");
 				} else {
-					$("td:eq(10)", row).addClass("text-success fw-bold");
+					$("td:eq(15)", row).addClass("text-success fw-bold");
 				}
 
 				if (data.stock_balance === "No Stock Balance") {
@@ -147,11 +162,11 @@ function initInventoryTable() {
 				}
 
 				if (data.selling_price === "No Selling Price") {
-					$("td:eq(5)", row).addClass("text-danger fw-bold");
+					$("td:eq(10)", row).addClass("text-danger fw-bold");
 				}
 
 				if (data.unit_price === "No Unit Price") {
-					$("td:eq(6)", row).addClass("text-danger fw-bold");
+					$("td:eq(11)", row).addClass("text-danger fw-bold");
 				}
 			},
 		});
@@ -211,7 +226,7 @@ function initInventoryTable() {
 			}
 
 			$.ajax({
-				url: "Controllers/PharmacyController.php",
+				url: "Controllers/PharmacyControllers.php",
 				type: "POST",
 				data: {
 					action: "pullout",

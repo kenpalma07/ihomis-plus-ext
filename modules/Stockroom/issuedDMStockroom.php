@@ -5,9 +5,9 @@ $startDate = $_GET['start_date'] ?? date('Y-m-d');
 $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 ?>
 
-<div id="issedDMFilters"
-	data-start="<? $startDate ?? '' ?>"
-	date-end="<?= $endDate ?? '' ?>">
+<div id="issuedDMStockFilter"
+	data-start="<?= $startDate ?? '' ?>"
+	data-end="<?= $endDate ?? '' ?>">
 </div>
 
 <nav class="navbar navbar-light bg-success sticky-top flex-md-nowrap p-2 shadow">
@@ -36,19 +36,19 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 	<div class="row mb-1">
 		<div class="col-md-4">
 			<div class="alert alert-primary py-2">
-				<strong>Total Drugs:</strong> <span id="totalDrugs">0</span>
+				<strong>Total Drugs Requested:</strong> <span id="totalDrugs">0</span>
 			</div>
 		</div>
 
 		<div class="col-md-4">
 			<div class="alert alert-success py-2">
-				<strong>Total Issued Qty:</strong> <span id="totalIssued">0</span>
+				<strong>Total Drugs Issued:</strong> <span id="totalIssued">0</span>
 			</div>
 		</div>
 
 		<div class="col-md-4">
-			<div class="alert alert-warning py-2">
-				<strong>Total Returned Qty:</strong> <span id="totalReturned">0</span>
+			<div class="alert alert-info py-2">
+				<strong>Total Drugs Received:</strong> <span id="totalReceived">0</span>
 			</div>
 		</div>
 	</div>
@@ -58,20 +58,20 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 	<form id="filterForm" class="row g-2 align-items-end">
 		<div class="col-md-3">
 			<label class="form-label"><b>Date Issued From</b></label>
-			<input type="date" id="issuedStart" class="form-control"
+			<input type="date" id="issuedStockStart" class="form-control"
 				value="<?= htmlspecialchars($startDate) ?>">
 		</div>
 
 		<div class="col-md-3">
 			<label class="form-label"><b>Date Issued To</b></label>
-			<input type="date" id="issuedEnd" class="form-control" value="<?= htmlspecialchars($endDate) ?>">
+			<input type="date" id="issuedStockEnd" class="form-control" value="<?= htmlspecialchars($endDate) ?>">
 		</div>
 
 		<div class="col-md-3">
-			<button type="button" id="filterIssued" class="btn btn-primary">
+			<button type="button" id="filterDMIssuedStock" class="btn btn-primary">
 				Filter
 			</button>
-			<button type="button" id="resetIssued" class="btn btn-secondary">
+			<button type="button" id="resetDMIssuedStock" class="btn btn-secondary">
 				Reset
 			</button>
 		</div>
@@ -85,14 +85,31 @@ $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 
 <div class="px-md-1">
 	<div class="table-container">
-		<table id="issuedDMSRTable" class="table table-striped table-bordered nowrap px-md-1" style="width:100%">
+		<table id="issuedDMSRTable" class="table table-striped table-bordered nowrap px-md-1" style="width:100%;">
 			<thead class="table-success">
 				<tr>
+					<th>CONTROL ID</th>
 					<th>ORDER DATE</th>
 					<th>DATE ISSUED</th>
+					<th>TURNAROUND TIME</th>
+					<th>LOT NUMBER</th>
+					<th>DRUG/MEDICINE</th>
+					<th>QTY REQUESTED</th>
+					<th>QTY ISSUED</th>
+					<th>QTY RECEIVED</th>
+					<th>FROM LOCATION</th>
+					<th>STATUS</th>
+					<th>RECEIVED</th>
+					<th>ISSUED BY</th>
 				</tr>
 			</thead>
 			<tbody></tbody>
 		</table>
 	</div>
 </div>
+
+<!-- <style>
+	#issuedDMSRTable td {
+		border: 1px solid black !important;
+	}
+</style> -->
