@@ -36,12 +36,12 @@ $pageTitle = "Radiology Report";
 
         <div class="col-md-3">
             <label class="form-label"><b>Request From</b></label>
-            <input type="date" id="reqStart" class="form-control">
+            <input type="date" id="reqStart" class="form-control" value="<?= date('Y-m-01') ?>">
         </div>
 
         <div class="col-md-3">
             <label class="form-label"><b>Request To</b></label>
-            <input type="date" id="reqEnd" class="form-control">
+            <input type="date" id="reqEnd" class="form-control" value="<?= date('Y-m-d') ?>">
         </div>
 
         <div class="col-md-3">

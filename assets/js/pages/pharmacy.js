@@ -14,7 +14,7 @@ function initInventoryTable() {
 			processing: true,
 			serverSide: true,
 			ajax: {
-				url: "Controllers/PharmacyControllers.php",
+				url: "Controllers/PharmacyController.php",
 				type: "POST",
 				data: function (d) {
 					d.action = "inventory";
@@ -483,6 +483,8 @@ function initIssuedDMTable() {
 		issuedTable = $("#issuedDMTable").DataTable({
 			processing: true,
 			serverSide: true,
+			responsive: true,
+			autoWidth: true,
 			ajax: {
 				url: "Controllers/PharmacyController.php",
 				type: "POST",
@@ -506,9 +508,11 @@ function initIssuedDMTable() {
 				[5, 10, 15, 50, 100, "All"],
 			],
 			scrollX: true,
-			order: [[0, "desc"]],
+			scrollCollapse: true,
+			order: [[1, "desc"]],
 			language: {
-				processing: "Loading issued records...",
+				processing:
+					'<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>',
 			},
 			dom:
 				"<'row px-md-1 mb-2'<'col-md-2'l><'col-md-4'B><'col-md-6'f>>" +
@@ -531,57 +535,65 @@ function initIssuedDMTable() {
 				},
 			],
 			columns: [
-				{
-					data: "order_date",
-				},
-				{
-					data: "date_issued",
-				},
-				{
-					data: "turnaround_time",
-				},
-				{
-					data: "lot_number",
-				},
-				{
-					data: "drug_description",
-				},
-				{
-					data: "hpercode",
-				},
-				{
-					data: "patient",
-				},
-				{
-					data: "quantity_issued",
-				},
-				{
-					data: "quantity_returned",
-				},
-				{
-					data: "order_type",
-				},
-				{
-					data: "account_type",
-				},
-				{
-					data: "issued_by",
-				},
+				{ data: "order_date" },
+				{ data: "date_issued" },
+				{ data: "turnaround_time" },
+				{ data: "lot_number" },
+				{ data: "drug_description" },
+				{ data: "hpercode" },
+				{ data: "patient" },
+				{ data: "charge_code" }, // <-- add this
+				{ data: "request_quantity" },
+				{ data: "quantity_issued" },
+				{ data: "quantity_returned" },
+				{ data: "net_dispensed" }, // <-- add if you want to show
+				{ data: "selling_price" }, // <-- add if you want to show
+				{ data: "total_amount" }, // <-- add if you want to show
+				{ data: "order_type" },
+				{ data: "account_type" },
+				{ data: "issued_by" },
 			],
 			createdRow: function (row, data) {
 				if (data.lot_number === "No Lot Number") {
 					$("td:eq(3)", row).addClass("text-danger fw-bold");
 				}
 			},
+			rowCallback: function (row, data) {
+				if (!data.turnaround_dhms) return;
+
+				let text = data.turnaround_dhms.toLowerCase();
+				let totalHours = 0;
+
+				let dayMatch = text.match(/(\d+)\s*day/);
+				if (dayMatch) totalHours += parseInt(dayMatch[1]) * 24;
+
+				let timeMatch = text.match(/(\d+):(\d+)(?::(\d+))?/);
+				if (timeMatch) {
+					let h = parseInt(timeMatch[1]) || 0;
+					let m = parseInt(timeMatch[2]) || 0;
+					let s = parseInt(timeMatch[3]) || 0;
+					totalHours += h + m / 60 + s / 3600;
+				}
+
+				if (totalHours > 8) {
+					$("td:eq(3)", row)
+						.removeClass("bg-success bg-success-subtle text-success text-dark")
+						.addClass("bg-danger-subtle text-danger fw-bold");
+				} else if (totalHours > 4) {
+					$("td:eq(3)", row)
+						.removeClass("bg-success bg-success-subtle text-success text-dark")
+						.addClass("bg-warning-subtle fw-bold");
+				}
+			},
 		});
 	}
 	$("#filterIssued").click(function () {
-		if (issuedTable) issuedTable.ajax.reload();
+		issuedTable.ajax.reload();
 	});
 	$("#resetIssued").click(function () {
 		$("#issuedStart").val(container.data("start"));
 		$("#issuedEnd").val(container.data("end"));
-		if (issuedTable) issuedTable.ajax.reload();
+		issuedTable.ajax.reload();
 	});
 
 	$(document).on("click", "#exportIssuedExcel", function (e) {
@@ -590,9 +602,12 @@ function initIssuedDMTable() {
 		let startDate = $("#issuedStart").val();
 		let endDate = $("#issuedEnd").val();
 
+		let search = issuedTable.search() || "";
+
 		let params = new URLSearchParams({
 			startDate: startDate || "",
 			endDate: endDate || "",
+			search: search,
 		});
 
 		let url =

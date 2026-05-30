@@ -18,10 +18,11 @@ $inventorySupplies = ($currentPage == 'inventorySupplies');
 $issuedSupplies = ($currentPage == 'issuedSupplies');
 $pulledoutSupplies = ($currentPage == 'pulledoutSupplies');
 
-$stockRoomPages = ['inventoryStockRoom', 'issuedDMStockRoom'];
+$stockRoomPages = ['inventoryStockRoom', 'issuedDMStockRoom', 'issuedSuppliesStockRoom'];
 $isStockRoomOpen = in_array($currentPage, $stockRoomPages);
 $inventoryStockRoom = ($currentPage == 'inventoryStockRoom');
 $issuedDMStockRoom = ($currentPage == 'issuedDMStockRoom');
+$issuedSuppliesStockRoom = ($currentPage == 'issuedSuppliesStockRoom');
 
 $medicalRecordPages = ['admissionLog', 'viewAdmissionLog', 'viewDashboard', 'erLog', 'viewERLog', 'opdLog', 'viewOPDLog'];
 $isMedicalRecordsOpen = in_array($currentPage, $medicalRecordPages);
@@ -216,6 +217,12 @@ $viewDashboard = ($currentPage == 'viewDashboard');
                                 Issued Drugs and Medicines to Pharmacy
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white <?= $issuedSuppliesStockRoom ? 'active' : '' ?>"
+                                href="index.php?page=issuedSuppliesStockRoom">
+                                Issued Non-Drugs and Supplies to Central Supply
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </li>
@@ -262,7 +269,7 @@ $viewDashboard = ($currentPage == 'viewDashboard');
     </div>
 </nav>
 
-<style>
+<!-- <style>
     #sidebarMenu {
         height: 100vh;
         /* Full screen height */
@@ -289,4 +296,4 @@ $viewDashboard = ($currentPage == 'viewDashboard');
     #sidebarMenu::-webkit-scrollbar-track {
         background: #343a40;
     }
-</style>
+</style> -->

@@ -30,11 +30,11 @@ $pageTitle = "Emergency Report";
     <form id="erFilterForm" class="row g-2 align-items-end">
         <div class="col-md-3">
             <label class="form-label"><b>Registration From</b></label>
-            <input type="date" id="regStart" class="form-control">
+            <input type="date" id="regStart" class="form-control" value="<?= date('Y-m-01') ?>">
         </div>
         <div class="col-md-3">
             <label class="form-label"><b>Registration To</b></label>
-            <input type="date" id="regEnd" class="form-control">
+            <input type="date" id="regEnd" class="form-control" value="<?= date('Y-m-d') ?>">
         </div>
         <div class="col-md-3">
             <label class="form-label"><b>Discharge From</b></label>

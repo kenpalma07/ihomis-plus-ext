@@ -700,7 +700,7 @@ function loadCSIssued($pdo)
             hrq.qty AS issued_quantity,
             hrq.pchrgup AS selling_price,
             hrq.pcchrgamt AS total_amount,
-            hr.qty AS returned_quantity,
+            IFNULL(hr.qty, 0) AS returned_quantity,
             chg.chrgdesc AS account_type,
             CONCAT(
                 hpl.lastname, ', ',

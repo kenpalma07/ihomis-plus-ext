@@ -35,22 +35,22 @@ function loadERTurnaroundTime($pdo)
 
         if (!empty($regStart)) {
             $where .= " AND logs.erdate >= :regStart";
-            $params[':regStart'] = $regStart;
+            $params[':regStart'] = $regStart . " 00:00:00";
         }
 
         if (!empty($regEnd)) {
             $where .= " AND logs.erdate <= :regEnd";
-            $params[':regEnd'] = $regEnd;
+            $params[':regEnd'] = $regEnd . " 23:59:59";
         }
 
         if (!empty($disStart)) {
             $where .= " AND logs.erdtedis >= :disStart";
-            $params[':disStart'] = $disStart;
+            $params[':disStart'] = $disStart . " 00:00:00";
         }
 
         if (!empty($disEnd)) {
             $where .= " AND logs.erdtedis <= :disEnd";
-            $params[':disEnd'] = $disEnd;
+            $params[':disEnd'] = $disEnd . " 23:59:59";
         }
 
         if (!empty($search)) {

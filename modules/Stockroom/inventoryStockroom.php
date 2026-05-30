@@ -114,7 +114,7 @@ $endDate   = $_GET['endDate'] ?? date('');
 					<th>STOCK</th>
 					<th>PURCHASE</th>
 					<th>SELLING</th>
-					<th>ACTION</th>
+					<th>STATUS</th>
 				</tr>
 			</thead>
 			<tbody></tbody>

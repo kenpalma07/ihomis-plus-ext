@@ -6,8 +6,8 @@ $endDate   = $_GET['endDate'] ?? date('Y-m-d');
 ?>
 
 <div id="issuedStockFilter"
-	data-start="<?= htmlspecialchars($startDate) ?>"
-	data-end="<?= htmlspecialchars($endDate) ?>">
+    data-start="<?= htmlspecialchars($startDate) ?>"
+    data-end="<?= htmlspecialchars($endDate) ?>">
 </div>
 
 <nav class="navbar navbar-light bg-success sticky-top flex-md-nowrap p-2 shadow">
@@ -95,8 +95,13 @@ $endDate   = $_GET['endDate'] ?? date('Y-m-d');
                     <th>DRUG/MEDICINE</th>
                     <th>HPERCODE</th>
                     <th>PATIENT</th>
-                    <th>ISSUED</th>
-                    <th>RETURNED</th>
+                    <th>CHARGESLIP</th>
+                    <th>REQUEST QTY</th>
+                    <th>ISSUED QTY</th>
+                    <th>RETURNED QTY</th>
+                    <th>NET DISPENSED</th>
+                    <th>SELLING PRICE</th>
+                    <th>TOTAL AMOUNT</th>
                     <th>ORDER</th>
                     <th>ACCOUNT</th>
                     <th>ISSUED BY</th>

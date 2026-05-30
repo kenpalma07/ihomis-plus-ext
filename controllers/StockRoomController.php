@@ -9,6 +9,9 @@ switch ($action) {
 	case 'issuedStocks':
 		issuedStocks($pdo);
 		break;
+	case 'issuedSupplies':
+		issuedSupplies($pdo);
+		break;
 }
 
 function loadStockInventory($pdo)
@@ -40,22 +43,43 @@ function loadStockInventory($pdo)
 
 		if (!empty($search)) {
 			$where .= " AND (
-				stck.dateadd LIKE :search
-				OR stck.expire LIKE :search
+				sup.suppname LIKE :search
+				OR (
+					CASE
+						WHEN stck.`expire` < CURDATE() AND stck.isActive = 'I' THEN 'EXPIRED/PULLOUT'
+						WHEN stck.`expire` < CURDATE() AND stck.isActive = 'A' THEN 'EXPIRED'
+						WHEN stck.`expire` >= CURDATE() AND stck.isActive = 'I' THEN 'PULLOUT'
+						WHEN stck.`expire` BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'NEAR EXPIRE'
+						ELSE 'GOOD'
+					END
+				) LIKE :search
 				OR stck.sales_invoice LIKE :search
-				OR stck.lotno LIKE :search
-				OR stck.stock LIKE :search
-				OR stck.purchase LIKE :search
-				OR stck.selling LIKE :search
-
-				OR sup.suppname LIKE :search
-				OR g.GENDESC LIKE :search
-				OR h.dmdnost LIKE :search
-				OR h.strecode LIKE :search
-				OR h.formcode LIKE :search
-				OR h2.cl2desc LIKE :search
-				OR h2.uomcode LIKE :search
+				OR (
+					CASE
+						WHEN stck.itemtype = 'DM' THEN
+							CONCAT_WS(' ',
+								g.GENDESC,
+								COALESCE(h.dmdnost, ''),
+								COALESCE(h.strecode, ''),
+								COALESCE(h.formcode, '')
+							)
+						WHEN stck.itemtype = 'SM' THEN
+							CONCAT_WS(' ',
+								h2.cl2desc,
+								h2.uomcode
+							)
+						ELSE 'Unknown Item Type'
+					END
+				) LIKE :search
 				OR chg.chrgdesc LIKE :search
+				OR stck.lotno LIKE :search
+				OR (
+					CASE
+						WHEN stck.isActive = 'A' THEN 'Active'
+						WHEN stck.isActive = 'I' THEN 'Inactive'
+						ELSE 'No Status'
+					END
+				) LIKE :search
 			)";
 
 			$params[':search'] = "%$search%";
@@ -290,7 +314,19 @@ function issuedStocks($pdo)
 						NULLIF(TRIM(h.formcode), '')
 					)
 				) LIKE :search
-				OR COALESCE(NULLIF(TRIM(hrx.locacode), 'PHARM'), 'Pharmacy') LIKE :search
+				OR (
+					CASE
+						WHEN hrx.locacode = 'PHARM' THEN '(PHARM) PHARMACY'
+						WHEN hrx.locacode = 'CSR' THEN '(CSR) CENTRAL SUPPLY'
+						WHEN hrx.locacode = 'ER' THEN '(ER) EMERGENCY'
+						WHEN hrx.locacode = 'OPD' THEN '(OPD) OUTPATIENT'
+						ELSE 
+						CONCAT
+						(
+							'(', ward.wardcode, ')', ' ', ward.wardname
+						)
+					END
+				) LIKE :search
 				OR (
 					CASE
 						WHEN hrx.status IN ('S', 'R') THEN 'Served'
@@ -314,7 +350,7 @@ function issuedStocks($pdo)
 					END
 				) LIKE :search
 				OR hrx.control_id LIKE :search
-				OR COALESCE(NULLIF(TRIM(hrxrq.qtyrcv), ''), 'Not yet received') LIKE :search
+				OR COALESCE(NULLIF(TRIM(hrxrq.qtyrcv), ''), 'Unreceived') LIKE :search
 			)";
 			$params[':search'] = "%$search%";
 		}
@@ -340,6 +376,9 @@ function issuedStocks($pdo)
 				
 			LEFT JOIN hpersonal hp
 				ON hp.employeeid = hrx.issuedby
+
+			LEFT JOIN hward ward
+				ON ward.wardcode = hrx.locacode
 		";
 
 		$countSql = "SELECT COUNT(*) $baseFrom $where";
@@ -367,7 +406,7 @@ function issuedStocks($pdo)
 		$orderDir = strtolower($_POST['order'][0]['dir'] ?? 'asc');
 		$orderDir = $orderDir === 'desc' ? 'DESC' : 'ASC';
 
-		$orderColumn = $columns[$orderColumnIndex] ?? 'entry_date';
+		$orderColumn = $columns[$orderColumnIndex] ?? 'issued_date';
 
 		$sql = "
 			SELECT
@@ -405,10 +444,19 @@ function issuedStocks($pdo)
 
 				hrxrq.qtyreq AS quantity_request,
 				hrx.issue_qty AS quantity_issued,
-				COALESCE(NULLIF(TRIM(hrxrq.qtyrcv), ''), 'Not yet received') AS quantity_received,
+				COALESCE(NULLIF(TRIM(hrxrq.qtyrcv), ''), 'Unreceived') AS quantity_received,
 				
-				COALESCE(NULLIF(TRIM(hrx.locacode), 'PHARM'), 'Pharmacy') AS from_location,
-				
+				CASE
+					WHEN hrx.locacode = 'PHARM' THEN '(PHARM) PHARMACY'
+					WHEN hrx.locacode = 'CSR' THEN '(CSR) CENTRAL SUPPLY'
+					WHEN hrx.locacode = 'ER' THEN '(ER) EMERGENCY'
+					WHEN hrx.locacode = 'OPD' THEN '(OPD) OUTPATIENT'
+					ELSE 
+					CONCAT
+					(
+						'(', ward.wardcode, ')', ' ', ward.wardname
+					)
+				END AS from_location,
 
 				CASE
 					WHEN hrx.status IN ('S', 'R') THEN 'Served'
@@ -424,13 +472,13 @@ function issuedStocks($pdo)
 				hrxrq.rxstatus,
 				hrxrq.phrxstatus,
 				CONCAT(
-				hp.lastname, ', ',
-				hp.firstname,
-				CASE
-					WHEN hp.middlename IS NULL OR hp.middlename = ''
-					THEN ''
-					ELSE CONCAT(' ', hp.middlename)
-				END
+					hp.lastname, ', ',
+					hp.firstname,
+					CASE
+						WHEN hp.middlename IS NULL OR hp.middlename = ''
+						THEN ''
+						ELSE CONCAT(' ', hp.middlename)
+					END
 				) AS issued_by,
 				hrx.control_id as control_id
 			$baseFrom
@@ -461,6 +509,238 @@ function issuedStocks($pdo)
                 SUM(hrxrq.qtyreq) AS totalDrugs,
 				SUM(hrxrq.qtyrcv) AS totalReceived,
                 SUM(hrx.issue_qty) AS totalIssued
+                -- SUM(IFNULL(r.qty_returned,0)) AS totalReturned
+            $baseFrom
+            $where
+        ";
+
+		$totalStmt = $pdo->prepare($totalSql);
+		$totalStmt->execute($params);
+		$totals = $totalStmt->fetch(PDO::FETCH_ASSOC);
+
+		echo json_encode([
+			"draw" => intval($draw),
+			"recordsTotal" => intval($total),
+			"recordsFiltered" => intval($total),
+			"data" => $data,
+			"totals" => $totals
+		]);
+	} catch (Exception $e) {
+		echo json_encode([
+			"draw" => 0,
+			"recordsTotal" => 0,
+			"recordsFiltered" => 0,
+			"data" => [],
+			"error" => $e->getMessage()
+		]);
+	}
+	exit;
+}
+
+function issuedSupplies($pdo)
+{
+	try {
+		$draw 	= $_POST['draw'] ?? 1;
+		$start 	= $_POST['start'] ?? 0;
+		$length = $_POST['length'] ?? 10;
+
+		$startDate = $_POST['startDate'] ?? '';
+		$endDate   = $_POST['endDate'] ?? '';
+		$search    = $_POST['search']['value'] ?? '';
+
+		$where = "WHERE 1=1";
+		$params = [];
+
+		// DATE FILTER (works if only start or end is provided)
+		if (!empty($startDate)) {
+			$where .= " AND order_date >= :startDate";
+			$params[':startDate'] = $startDate . " 00:00:00";
+		}
+		if (!empty($endDate)) {
+			$where .= " AND hrq.dteissue <= :endDate";
+			$params[':endDate'] = $endDate . " 23:59:59";
+		}
+
+		if (!empty($search)) {
+			$where .= " AND
+				hrq.control_id LIKE :search
+				OR COALESCE(NULLIF(TRIM(hrq.lotno), ''), 'No Lot Number') LIKE :search
+				OR CONCAT_WS(' ', h2.cl2desc, h2.uomcode) LIKE :search
+				OR COALESCE(NULLIF(TRIM(hrqdrq.qtyrcv), ''), 'Pending') LIKE :search
+				OR (
+					CASE
+						WHEN hrq.locacode = 'PHARM' THEN '(PHARM) PHARMACY'
+						WHEN hrq.locacode = 'CSR' THEN '(CSR) CENTRAL SUPPLY'
+						WHEN hrq.locacode = 'ER' THEN '(ER) EMERGENCY'
+						ELSE 
+						CONCAT
+						(
+							'(', ward.wardcode, ')', ' ', ward.wardname
+						)
+					END
+				) LIKE :search
+				OR (
+					CASE
+						WHEN hrqdrq.rqdstatus = 'S' THEN 'Served'
+						ELSE 'Unserved'
+					END
+				) LIKE :search
+				OR (
+					CASE
+						WHEN hrqdrq.crqdstatus = 'S' THEN 'Received'
+						ELSE 'Unserved'
+					END
+				) LIKE :search
+				OR CONCAT(
+					hp.lastname, ', ',
+					hp.firstname,
+					CASE
+						WHEN hp.middlename IS NULL OR hp.middlename = ''
+						THEN ''
+						ELSE CONCAT(' ', hp.middlename)
+					END
+				) LIKE :search
+			";
+			$params[':search'] = "%$search%";
+		}
+
+		$baseFrom = "
+			FROM hrqissue hrq
+
+			INNER JOIN (
+				SELECT
+					control_id,
+					MIN(dtereq) AS order_date,
+					qtyreq,
+					qtyrcv,
+					rqdstatus,
+					crqdstatus
+				FROM hrqdrequest
+				WHERE rqdstatus = 'S'
+				AND crqdstatus IN ('S', 'U')
+				GROUP BY control_id
+			) hrqdrq
+				ON hrq.control_id = hrqdrq.control_id
+
+			LEFT JOIN hclass2 h2
+				ON h2.cl2comb = hrq.cl2comb
+				
+			LEFT JOIN hpersonal hp
+				ON hp.employeeid = hrq.issuedby
+				
+			LEFT JOIN hward ward
+				ON ward.wardcode = hrq.locacode
+		";
+
+		$columns = [
+			0 => 'control_id',
+			1 => 'order_date',
+			2 => 'issued_date',
+			3 => 'turnaround_dhms',
+			4 => 'lot_number',
+			5 => 'supply_name',
+			6 => 'quantity_request',
+			7 => 'quantity_issued',
+			8 => 'quantity_received',
+			9 => 'from_location',
+			10 => 'Status',
+			11 => 'Received',
+			12 => 'issued_by'
+		];
+
+		$countSql = "SELECT COUNT(*) $baseFrom $where";
+		$countStmt = $pdo->prepare($countSql);
+		$countStmt->execute($params);
+		$total = $countStmt->fetchColumn();
+
+		$orderColumnIndex = $_POST['order'][0]['column'] ?? 0;
+		$orderDir = strtolower($_POST['order'][0]['dir'] ?? 'asc');
+		$orderDir = $orderDir === 'desc' ? 'DESC' : 'ASC';
+
+		$orderColumn = $columns[$orderColumnIndex] ?? 'issued_date';
+
+		$sql = "
+			SELECT
+				hrq.control_id AS control_id,
+				hrqdrq.order_date AS order_date,
+				hrq.dteissue AS issued_date,
+				
+				CONCAT(
+					FLOOR(TIMESTAMPDIFF(SECOND, hrqdrq.order_date, hrq.dteissue) / 86400),
+					' days - ',
+					SEC_TO_TIME(
+						MOD(
+							TIMESTAMPDIFF(SECOND, hrqdrq.order_date, hrq.dteissue),
+							86400
+						)
+					)
+				) AS turnaround_dhms,
+				
+				COALESCE(NULLIF(TRIM(hrq.lotno), ''), 'No Lot Number') AS lot_number,
+				CONCAT_WS(' ', h2.cl2desc, h2.uomcode) AS supply_name,
+				hrqdrq.qtyreq AS quantity_request,
+				hrq.issue_qty AS quantity_issued,
+				COALESCE(NULLIF(TRIM(hrqdrq.qtyrcv), ''), 'Pending') AS quantity_received,
+				CASE
+					WHEN hrq.locacode = 'PHARM' THEN '(PHARM) PHARMACY'
+					WHEN hrq.locacode = 'CSR' THEN '(CSR) CENTRAL SUPPLY'
+					WHEN hrq.locacode = 'ER' THEN '(ER) EMERGENCY'
+					WHEN hrq.locacode = 'OPD' THEN '(OPD) OUTPATIENT'
+					ELSE 
+					CONCAT
+					(
+						'(', ward.wardcode, ')', ' ', ward.wardname
+					)
+				END AS from_location,
+				
+				CASE
+					WHEN hrqdrq.rqdstatus = 'S' THEN 'Served'
+					ELSE 'Unserved'
+				END AS `Status`,
+
+				CASE
+					WHEN hrqdrq.crqdstatus = 'S' THEN 'Received'
+					ELSE 'Unserved'
+				END AS `Received`,
+				
+				CONCAT(
+					hp.lastname, ', ',
+					hp.firstname,
+					CASE
+						WHEN hp.middlename IS NULL OR hp.middlename = ''
+						THEN ''
+						ELSE CONCAT(' ', hp.middlename)
+					END
+				) AS issued_by
+
+			$baseFrom
+			$where
+			ORDER BY $orderColumn $orderDir
+		";
+
+		if ($length != -1) {
+			$sql .= " LIMIT :start, :length";
+		}
+
+		$stmt = $pdo->prepare($sql);
+
+		foreach ($params as $k => $v) {
+			$stmt->bindValue($k, $v);
+		}
+
+		if ($length != -1) {
+			$stmt->bindValue(':start', (int)$start, PDO::PARAM_INT);
+			$stmt->bindValue(':length', (int)$length, PDO::PARAM_INT);
+		}
+
+		$stmt->execute();
+		$data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+		$totalSql = "
+            SELECT
+                SUM(hrqdrq.qtyreq) AS totalSupplies,
+				SUM(hrqdrq.qtyrcv) AS totalReceivedSupplies,
+                SUM(hrq.issue_qty) AS totalIssuedSupplies
                 -- SUM(IFNULL(r.qty_returned,0)) AS totalReturned
             $baseFrom
             $where

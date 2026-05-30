@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Asia/Manila');
 $pageTitle = "Patient Masterlist";
 require 'db.php';
 include 'routes/web.php';

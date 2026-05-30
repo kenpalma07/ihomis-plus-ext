@@ -24,11 +24,12 @@ $search    = $_GET['search'] ?? '';
    WHERE CONDITIONS
 ========================= */
 $where = "WHERE 1=1
-            AND hp.isActive = 'Y'
-            -- AND hp.lotno IS NOT NULL AND hp.lotno != ''
-            -- AND hp.isActive IS NOT NULL AND hp.isActive != 'N'
-            -- AND hp.stock_status IS NOT NULL AND hp.stock_status != 'N'
-            ";
+            AND inv.lotno IS NOT NULL
+            AND inv.lotno != ''
+            AND inv.isActive IS NOT NULL
+            AND inv.isActive != 'N'
+            AND inv.stock_status IS NOT NULL
+        ";
 
 $params = [];
 
@@ -42,13 +43,18 @@ if (!empty($startDate) && !empty($endDate)) {
 /* SEARCH FILTER */
 if (!empty($search)) {
     $where .= " AND (
-        hp.lotno LIKE :search
+        COALESCE(NULLIF(inv.lotno, ''), 'No Lot Number') LIKE :search
         OR g.GENDESC LIKE :search
         OR h.brandname LIKE :search
         OR h.dmdnost LIKE :search
         OR h.strecode LIKE :search
         OR h.formcode LIKE :search
-        OR hp.stockbal LIKE :search
+        OR (
+            CASE
+                WHEN inv.stockbal IS NULL OR inv.stockbal = 0 THEN 'No Stock Balance'
+                ELSE inv.stockbal
+            END  
+        ) LIKE :search
         OR COALESCE(NULLIF(hp.dmselprice, ''), 'No Selling Price') LIKE :search
         OR COALESCE(NULLIF(hp.dmduprice, ''), 'No Unit Price') LIKE :search
         OR hp.dmdprdte LIKE :search
@@ -68,12 +74,114 @@ if (!empty($search)) {
     $params[':search'] = "%$search%";
 }
 
+$baseFrom = "
+    FROM hdmhdrprice inv
+
+        -- =========================
+        -- DRUG MASTER
+        -- =========================
+        LEFT JOIN hdmhdr h
+            ON inv.dmdcomb = h.dmdcomb
+            AND inv.dmdctr = h.dmdctr
+
+        LEFT JOIN hcharge chg
+            ON inv.dmhdrsub = chg.chrgcode
+
+        LEFT JOIN hdruggrp dg
+            ON h.grpcode = dg.grpcode
+
+        LEFT JOIN hgen g
+            ON dg.gencode = g.gencode
+
+        -- =========================
+        -- ISSUED / RETURNED
+        -- =========================
+        LEFT JOIN (
+            SELECT
+                i.lotno,
+                i.dmdcomb,
+                i.dmdctr,
+                SUM(i.qty) AS total_quantity_issued,
+                IFNULL(SUM(r.qty_returned), 0) AS total_quantity_returned
+            FROM hrxoissue i
+
+            LEFT JOIN (
+                SELECT
+                    docointkey,
+                    dmdcomb,
+                    dmdctr,
+                    lotno,
+                    SUM(qty) AS qty_returned
+                FROM hrxoreturn
+                GROUP BY docointkey, dmdcomb, dmdctr, lotno
+            ) r
+                ON i.docointkey = r.docointkey
+                AND i.dmdcomb = r.dmdcomb
+                AND i.dmdctr = r.dmdctr
+                AND i.lotno = r.lotno
+
+            WHERE i.qty IS NOT NULL
+            AND i.qty > 0
+
+            GROUP BY i.lotno, i.dmdcomb, i.dmdctr
+        ) issued
+            ON inv.lotno = issued.lotno
+            AND inv.dmdcomb = issued.dmdcomb
+            AND inv.dmdctr = issued.dmdctr
+
+        -- =========================
+        -- ADJUSTMENTS
+        -- =========================
+        LEFT JOIN (
+            SELECT
+                a.lotno,
+                a.dmdcomb,
+                a.dmdctr,
+
+                -- PLUS adjustments
+                SUM(
+                    CASE
+                        WHEN a.plusminus = '+'
+                            AND (a.adjcancel IS NULL OR a.adjcancel != 'Y')
+                        THEN a.qty
+                        ELSE 0
+                    END
+                ) AS adjustment_addition,
+
+                -- MINUS adjustments
+                SUM(
+                    CASE
+                        WHEN a.plusminus = '-'
+                            AND (a.adjcancel IS NULL OR a.adjcancel != 'Y')
+                        THEN a.qty
+                        ELSE 0
+                    END
+                ) AS adjustment_deduction
+
+            FROM hadjust a
+
+            WHERE a.qty IS NOT NULL
+            AND a.qty > 0
+
+            GROUP BY
+                a.lotno,
+                a.dmdcomb,
+                a.dmdctr
+        ) adj
+            ON inv.lotno = adj.lotno
+            AND inv.dmdcomb = adj.dmdcomb
+            AND inv.dmdctr = adj.dmdctr
+    ";
+
 /* =========================
    MAIN QUERY
 ========================= */
 $sql = "
 SELECT
-    COALESCE(NULLIF(hp.lotno, ''), 'No Lot Number') AS lot_number,
+    -- =========================
+    -- INVENTORY DETAILS
+    -- =========================
+    COALESCE(NULLIF(inv.lotno, ''), 'No Lot Number') AS lot_number,
 
     CONCAT_WS(' ',
         CONCAT_WS('', g.GENDESC,
@@ -88,38 +196,82 @@ SELECT
         COALESCE(h.formcode, '')
     ) AS drug_description,
 
-    COALESCE(NULLIF(hp.stockbal, ''), 'No Stock Balance') AS stock_balance,
-    hp.begbal AS beg_balance,
-    (hp.begbal - hp.stockbal) AS total_dispensed,
-    COALESCE(NULLIF(hp.dmselprice, ''), 'No Selling Price') AS selling_price,
-    COALESCE(NULLIF(hp.dmduprice, ''), 'No Unit Price') AS unit_price,
-    hp.dmdprdte AS entry_date,
-    COALESCE(NULLIF(hp.expiry, ''), 'No Expiration Date') AS expiration_date,
-    hp.dmhdrsub AS account_type,
+    CASE
+        WHEN inv.stockbal IS NULL OR inv.stockbal = 0 THEN 'No Stock Balance'
+        ELSE inv.stockbal
+    END AS stock_balance,
+
+    inv.begbal AS beg_balance,
+
+    -- =========================
+    -- DISPENSING
+    -- =========================
+    IFNULL(issued.total_quantity_issued, 0) AS total_dispensed,
+
+    IFNULL(issued.total_quantity_returned, 0) AS total_returned,
+
+    (
+        IFNULL(issued.total_quantity_issued, 0)
+        - IFNULL(issued.total_quantity_returned, 0)
+    ) AS net_dispensed,
+
+    -- =========================
+    -- ADJUSTMENTS
+    -- =========================
+    IFNULL(adj.adjustment_addition, 0) AS adjustment_addition,
+
+    IFNULL(adj.adjustment_deduction, 0) AS adjustment_deduction,
+
+    -- =========================
+    -- OPTIONAL TRUE STOCK MOVEMENT
+    -- beg + additions - deductions - net dispensed
+    -- =========================
+    (
+        inv.begbal
+        + IFNULL(adj.adjustment_addition, 0)
+        - IFNULL(adj.adjustment_deduction, 0)
+        - (
+            IFNULL(issued.total_quantity_issued, 0)
+            - IFNULL(issued.total_quantity_returned, 0)
+        )
+    ) AS calculated_expected_stock,
+
+    -- =========================
+    -- PRICING
+    -- =========================
+    COALESCE(NULLIF(inv.dmselprice, ''), 'No Selling Price') AS selling_price,
+    COALESCE(NULLIF(inv.dmduprice, ''), 'No Unit Price') AS unit_price,
+
+    inv.dmdprdte AS entry_date,
+    COALESCE(NULLIF(inv.expiry, ''), 'No Expiration Date') AS expiration_date,
+
+    chg.chrgdesc AS account_type,
+
+    -- =========================
+    -- STATUS
+    -- =========================
+    CASE
+        WHEN inv.expiry < CURDATE() AND inv.isActive = 'N' THEN 'EXPIRED/PULLOUT'
+        WHEN inv.expiry < CURDATE() AND inv.isActive = 'Y' THEN 'EXPIRED'
+        WHEN inv.expiry >= CURDATE() AND inv.isActive = 'N' THEN 'PULLOUT'
+        WHEN inv.expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'NEAR EXPIRE'
+        ELSE 'GOOD'
+    END AS status,
 
     CASE
-        WHEN hp.expiry < CURDATE() AND hp.isActive = 'N' THEN 'EXPIRED/PULLOUT'
-        WHEN hp.expiry < CURDATE() AND hp.isActive = 'Y' THEN 'EXPIRED'
-        WHEN hp.expiry >= CURDATE() AND hp.isActive = 'N' THEN 'PULLOUT'
-        WHEN hp.expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 'NEAR EXPIRE'
-        ELSE 'GOOD'
-    END AS status
+        WHEN inv.expiry < CURDATE() AND inv.isActive = 'Y' THEN 0
+        WHEN inv.expiry BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY) THEN 1
+        WHEN inv.expiry < CURDATE() AND inv.isActive = 'N' THEN 4
+        WHEN inv.expiry >= CURDATE() AND inv.isActive = 'N' THEN 3
+        ELSE 2
+    END AS trigger_order,
 
-FROM hdmhdrprice hp
+    inv.delintkey AS id
 
-LEFT JOIN hdmhdr h
-    ON hp.dmdcomb = h.dmdcomb
-    AND hp.dmdctr = h.dmdctr
+    $baseFrom
+    $where
 
-LEFT JOIN hdruggrp dg
-    ON h.grpcode = dg.grpcode
-
-LEFT JOIN hgen g
-    ON dg.gencode = g.gencode
-
-$where
-
-ORDER BY hp.expiry ASC
+    ORDER BY trigger_order ASC, entry_date DESC
 ";
 
 /* =========================
@@ -133,37 +285,85 @@ foreach ($params as $k => $v) {
 
 $stmt->execute();
 
+$thead = "
+   background-color:#198754;
+   color:#ffffff;
+   font-weight:bold;
+";
+
 /* =========================
    OUTPUT TABLE
 ========================= */
 echo "<table border='1'>";
 
 echo "<tr>
-    <th>Lot Number</th>
-    <th>Drug/Medicine</th>
-    <th>Stock Balance</th>
-    <th>Beginning Balance</th>
-    <th>Total Dispensed</th>
-    <th>Selling Price</th>
-    <th>Entry Date</th>
-    <th>Expiration Date</th>
-    <th>Account Type</th>
-    <th>Status</th>
+    <th style='{$thead}'>LOT NUMBER</th>
+    <th style='{$thead}'>DRUG AND MEDICINE</th>
+    <th style='{$thead}'>STOCK BALANCE</th>
+    <th style='{$thead}'>BEGINNING BALANCE</th>
+    <th style='{$thead}'>TOTAL DISPENSED</th>
+    <th style='{$thead}'>TOTAL RETURNED</th>
+    <th style='{$thead}'>NET DISPENSED</th>
+    <th style='{$thead}'>ADJUSMENT (ADDITION)</th>
+    <th style='{$thead}'>ADJUSTMENT (DEDUCTION)</th>
+    <th style='{$thead}'>EXPECTED ENDING BALANCE</th>
+    <th style='{$thead}'>SELLING PRICE</th>
+    <th style='{$thead}'>UNIT PRICE</th>
+    <th style='{$thead}'>ENTRY DATE</th>
+    <th style='{$thead}'>EXPIRY DATE</th>
+    <th style='{$thead}'>ACCOUNT TYPE</th>
+    <th style='{$thead}'>STATUS</th>
 </tr>";
 
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
 
+    /* =========================
+       COLOR ENTIRE ROW
+       (Only across existing 16 columns)
+    ========================= */
+    $rowStyle = "";
+
+    switch (strtoupper(trim($row['status']))) {
+        case 'EXPIRED':
+            $rowStyle = "background-color:#ff9999;";
+            break;
+
+        case 'EXPIRED/PULLOUT':
+            $rowStyle = "background-color:#ff4d4d; color:#ffffff;";
+            break;
+
+        case 'NEAR EXPIRE':
+            $rowStyle = "background-color:#fff599;";
+            break;
+
+        case 'PULLOUT':
+            $rowStyle = "background-color:#d9d9d9;";
+            break;
+
+        default:
+            $rowStyle = "background-color:#ffffff;";
+            break;
+    }
+
     echo "<tr>";
-    echo "<td style='mso-number-format:\"\\@\";'>" . $row['lot_number'] . "</td>";
-    echo "<td>" . $row['drug_description'] . "</td>";
-    echo "<td>" . $row['stock_balance'] . "</td>";
-    echo "<td>" . $row['beg_balance'] . "</td>";
-    echo "<td>" . $row['total_dispensed'] . "</td>";
-    echo "<td>" . $row['selling_price'] . "</td>";
-    echo "<td>" . $row['entry_date'] . "</td>";
-    echo "<td>" . $row['expiration_date'] . "</td>";
-    echo "<td>" . $row['account_type'] . "</td>";
-    echo "<td>" . $row['status'] . "</td>";
+
+    echo "<td style='{$rowStyle} mso-number-format:\"\\@\";'>{$row['lot_number']}</td>"; // 1
+    echo "<td style='{$rowStyle}'>{$row['drug_description']}</td>"; // 2
+    echo "<td style='{$rowStyle}'>{$row['stock_balance']}</td>"; // 3
+    echo "<td style='{$rowStyle}'>{$row['beg_balance']}</td>"; // 4
+    echo "<td style='{$rowStyle}'>{$row['total_dispensed']}</td>"; // 5
+    echo "<td style='{$rowStyle}'>{$row['total_returned']}</td>"; // 6
+    echo "<td style='{$rowStyle}'>{$row['net_dispensed']}</td>"; // 7
+    echo "<td style='{$rowStyle}'>{$row['adjustment_addition']}</td>"; // 8
+    echo "<td style='{$rowStyle}'>{$row['adjustment_deduction']}</td>"; // 9
+    echo "<td style='{$rowStyle}'>{$row['calculated_expected_stock']}</td>"; // 10
+    echo "<td style='{$rowStyle}'>{$row['selling_price']}</td>"; // 11
+    echo "<td style='{$rowStyle}'>{$row['unit_price']}</td>"; // 12
+    echo "<td style='{$rowStyle}'>{$row['entry_date']}</td>"; // 13
+    echo "<td style='{$rowStyle}'>{$row['expiration_date']}</td>"; // 14
+    echo "<td style='{$rowStyle}'>{$row['account_type']}</td>"; // 15
+    echo "<td style='{$rowStyle}'>{$row['status']}</td>"; // 16
+
     echo "</tr>";
 }
 

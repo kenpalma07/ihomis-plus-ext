@@ -445,50 +445,56 @@ function loadIssued($pdo)
         if (!empty($search)) {
             $where .= " AND (
             -- Drug description
-            g.GENDESC LIKE :search
-            OR h.brandname LIKE :search
-            OR h.dmdnost LIKE :search
-            OR h.strecode LIKE :search
-            OR h.formcode LIKE :search
-
-            -- Patient info
+            COALESCE(NULLIF(i.lotno, ''), 'No Lot Number') LIKE :search
+            OR TRIM ( 
+                CONCAT_WS(' ',
+                    CONCAT(
+                        g.GENDESC,
+                        CASE 
+                            WHEN h.brandname IS NULL OR h.brandname = '' THEN ''
+                            ELSE CONCAT(' (', h.brandname, ')')
+                        END
+                    ),
+                    COALESCE(h.dmdnost, ''),
+                    COALESCE(h.strecode, ''),
+                    COALESCE(h.formcode, '')
+                )
+            ) LIKE :search
             OR p.hpercode LIKE :search
-            OR p.patlast LIKE :search
-            OR p.patfirst LIKE :search
-            OR p.patmiddle LIKE :search
-
-            -- Full patient name
-            OR CONCAT(
-                p.patlast, ', ',
-                p.patfirst,
+            OR TRIM (
+                CONCAT(
+                    p.patlast, ', ',
+                    p.patfirst,
+                    CASE
+                        WHEN p.patsuffix IS NULL OR p.patsuffix IN ('NOTAP','N/A') THEN ''
+                        ELSE CONCAT(' ', p.patsuffix)
+                    END,
+                    CASE
+                        WHEN p.patmiddle IS NULL OR p.patmiddle IN ('','N/A') THEN ''
+                        ELSE CONCAT(', ', p.patmiddle)
+                    END
+                )
+            ) LIKE :search
+            OR i.pcchrgcod LIKE :search
+            OR
+            (
                 CASE
-                    WHEN p.patsuffix IS NULL OR p.patsuffix IN ('NOTAP','N/A') THEN ''
-                    ELSE CONCAT(' ', p.patsuffix)
-                END,
-                CASE
-                    WHEN p.patmiddle IS NULL OR p.patmiddle IN ('','N/A') THEN ''
-                    ELSE CONCAT(', ', p.patmiddle)
+                    WHEN hx.estatus = 'R' THEN 'Prescription Only'
+                    ELSE 'Order'
                 END
             ) LIKE :search
-
-            -- Quantities
-            OR i.qty LIKE :search
-            OR IFNULL(r.qty_returned,0) LIKE :search
-
-            -- Issued by
-            OR CONCAT(
-                hp.lastname, ', ',
-                hp.firstname,
-                CASE
-                    WHEN hp.middlename IS NULL OR hp.middlename = ''
-                    THEN ''
-                    ELSE CONCAT(' ', hp.middlename)
-                END
+            OR chg.chrgdesc LIKE :search
+            OR TRIM (
+                CONCAT(
+                    hp.lastname, ', ',
+                    hp.firstname,
+                    CASE
+                        WHEN hp.middlename IS NULL OR hp.middlename = ''
+                        THEN ''
+                        ELSE CONCAT(' ', hp.middlename)
+                    END
+                )
             ) LIKE :search
-
-            -- Date + lot
-            OR i.issuedte LIKE :search
-            OR i.lotno LIKE :search
         )";
 
             $params[':search'] = "%$search%";
@@ -500,28 +506,29 @@ function loadIssued($pdo)
         $baseFrom = "
             FROM hrxoissue i
 
-            LEFT JOIN (
-                SELECT docointkey, dmdcomb, dmdctr, SUM(qty) AS qty_returned
-                FROM hrxoreturn
-                GROUP BY docointkey,dmdcomb,dmdctr
-            ) r
-                ON i.docointkey = r.docointkey
-                AND i.dmdcomb = r.dmdcomb
-                AND i.dmdctr = r.dmdctr
+        LEFT JOIN (
+            SELECT docointkey, dmdcomb, dmdctr, SUM(qty) AS qty_returned
+            FROM hrxoreturn
+            GROUP BY docointkey,dmdcomb,dmdctr
+        ) r
+            ON i.docointkey = r.docointkey
+            AND i.dmdcomb = r.dmdcomb
+            AND i.dmdctr = r.dmdctr
 
-            -- ✅ FIXED JOIN
-            LEFT JOIN hdmhdr h 
-                ON i.dmdcomb = h.dmdcomb
-                AND i.dmdctr = h.dmdctr
+        -- ✅ FIXED JOIN
+        LEFT JOIN hdmhdr h 
+            ON i.dmdcomb = h.dmdcomb
+            AND i.dmdctr = h.dmdctr
 
-            LEFT JOIN hdruggrp dg ON h.grpcode = dg.grpcode
-            LEFT JOIN hgen g ON dg.gencode = g.gencode
+        LEFT JOIN hdruggrp dg ON h.grpcode = dg.grpcode
+        LEFT JOIN hgen g ON dg.gencode = g.gencode
 
-            LEFT JOIN hcharge chg ON i.chrgcode = chg.chrgcode
+        LEFT JOIN hcharge chg ON i.chrgcode = chg.chrgcode
 
-            LEFT JOIN hperson p ON i.hpercode = p.hpercode
-            LEFT JOIN hpersonal hp ON hp.employeeid = i.issuedby
-            LEFT JOIN hrxo hx ON i.docointkey = hx.docointkey
+        LEFT JOIN hperson p ON i.hpercode = p.hpercode
+        LEFT JOIN hpersonal hp ON hp.employeeid = i.issuedby
+        LEFT JOIN hrxo hx ON i.docointkey = hx.docointkey
+
         ";
 
         /* =========================
@@ -532,18 +539,56 @@ function loadIssued($pdo)
         $countStmt->execute($params);
         $total = $countStmt->fetchColumn();
 
+        $columns = [
+            0 => 'order_date',
+            1 => 'date_issued',
+            2 => 'turnaround_time',
+            3 => 'lot_number',
+            4 => 'drug_description',
+            5 => 'hpercode',
+            6 => 'patient',
+            7 => 'charge_code',
+            8 => 'request_quantity',
+            9 => 'quantity_issued',
+            10 => 'quantity_returned',
+            11 => 'net_dispensed',
+            12 => 'selling_price',
+            13 => 'total_amount',
+            14 => 'order_type',
+            15 => 'account_type',
+            16 => 'issued_by'
+        ];
+
+        $orderColumnIndex = $_POST['order'][0]['column'] ?? 0;
+        $orderDir = strtolower($_POST['order'][0]['dir'] ?? 'asc');
+        $orderDir = $orderDir === 'desc' ? 'DESC' : 'ASC';
+
+        $orderColumn = $columns[$orderColumnIndex] ?? 'date_issued';
+
         /* =========================
            MAIN DATA QUERY
         ========================= */
         $sql = "
             SELECT
+                hx.dodate AS order_date,
+                i.issuedte AS date_issued,
+                
+                CONCAT(
+                    FLOOR(TIMESTAMPDIFF(SECOND, hx.dodate, i.issuedte) / 86400),
+                    ' days - ',
+                    SEC_TO_TIME(
+                        MOD(
+                            TIMESTAMPDIFF(SECOND, hx.dodate, i.issuedte), 86400
+                        )
+                    )
+                ) AS turnaround_time,
+                
                 COALESCE(NULLIF(i.lotno, ''), 'No Lot Number') AS lot_number,
                 CONCAT_WS(' ',
                     CONCAT(
                         g.GENDESC,
                         CASE 
-                            WHEN h.brandname IS NULL OR h.brandname = ''
-                            THEN ''
+                            WHEN h.brandname IS NULL OR h.brandname = '' THEN ''
                             ELSE CONCAT(' (', h.brandname, ')')
                         END
                     ),
@@ -566,9 +611,17 @@ function loadIssued($pdo)
                         ELSE CONCAT(', ', p.patmiddle)
                     END
                 ) AS patient,
-
+                
+                COALESCE(i.pcchrgcod, '') AS charge_code,
+                hx.pchrgqty AS request_quantity,
                 i.qty AS quantity_issued,
                 IFNULL(r.qty_returned,0) AS quantity_returned,
+                (
+                    IFNULL(i.qty, 0)
+                    - IFNULL(r.qty_returned, 0)
+                ) AS net_dispensed,
+                hx.pchrgup AS selling_price,
+                hx.pcchrgamt AS total_amount,
 
                 CASE
                     WHEN hx.estatus = 'R' THEN 'Prescription Only'
@@ -585,23 +638,11 @@ function loadIssued($pdo)
                         THEN ''
                         ELSE CONCAT(' ', hp.middlename)
                     END
-                ) AS issued_by,
-
-                i.issuedte AS date_issued,
-                hx.dodate AS order_date,
-                CONCAT(
-                    FLOOR(TIMESTAMPDIFF(SECOND, hx.dodate, i.issuedte) / 86400),
-                    ' days - ',
-                    SEC_TO_TIME(
-                        MOD(
-                            TIMESTAMPDIFF(SECOND, hx.dodate, i.issuedte), 86400
-                        )
-                    )
-                ) AS turnaround_time
+                ) AS issued_by
 
             $baseFrom
             $where
-            ORDER BY i.issuedte DESC
+            ORDER BY $orderColumn $orderDir
         ";
 
         // LIMIT

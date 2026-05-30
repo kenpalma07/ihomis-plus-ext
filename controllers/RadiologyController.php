@@ -62,23 +62,23 @@ if (!empty($searchValue)) {
 // Request Date Filter
 if (!empty($reqStart)) {
     $filterConditions[] = "hdocord.dodate >= :reqStart";
-    $params[':reqStart'] = $reqStart;
+    $params[':reqStart'] = $reqStart . " 00:00:00";
 }
 
 if (!empty($reqEnd)) {
     $filterConditions[] = "hdocord.dodate <= :reqEnd";
-    $params[':reqEnd'] = $reqEnd;
+    $params[':reqEnd'] = $reqEnd . " 23:59:59";
 }
 
 // Charged Date Filter
 if (!empty($chgStart)) {
     $filterConditions[] = "hdocord.charged_date >= :chgStart";
-    $params[':chgStart'] = $chgStart;
+    $params[':chgStart'] = $chgStart . " 00:00:00";
 }
 
 if (!empty($chgEnd)) {
     $filterConditions[] = "hdocord.charged_date <= :chgEnd";
-    $params[':chgEnd'] = $chgEnd;
+    $params[':chgEnd'] = $chgEnd . " 23:59:59";
 }
 
 $filterSql = '';
@@ -149,8 +149,8 @@ CASE
 END AS estatus,
 
 CASE
-    WHEN henctr.encstat = 'A' THEN 'Active'
-    WHEN henctr.encstat = 'I' THEN 'Inactive'
+    WHEN henctr.encstat = 'A' THEN 'ACTIVE'
+    WHEN henctr.encstat = 'I' THEN 'DISCHARGED'
     ELSE 'Unknown'
 END AS encounter_status,
 
