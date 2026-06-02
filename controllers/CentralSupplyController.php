@@ -590,22 +590,7 @@ function loadCSIssued($pdo)
         if (!empty($search)) {
             $where .= " AND (
                 hrq.itemcode LIKE :search
-                OR hc.cl2desc LIKE :search
                 OR hp.hpercode LIKE :search
-
-                OR CONCAT(hp.patfirst, ' ', hp.patlast) LIKE :search
-                OR CONCAT(hp.patlast, ', ', hp.patfirst) LIKE :search
-                OR CONCAT(hp.patfirst, ' ', hp.patlast, ' ', hp.patmiddle) LIKE :search
-                OR CONCAT(hp.patlast, ', ', hp.patfirst, ' ', hp.patmiddle) LIKE :search
-                OR hp.patlast LIKE :search
-                OR hp.patfirst LIKE :search
-                OR hp.patmiddle LIKE :search
-
-                OR hrq.pcchrgcode LIKE :search
-                OR chg.chrgdesc LIKE :search
-                OR CONCAT(hpl.lastname, ', ', hpl.firstname) LIKE :search
-                OR hpl.firstname LIKE :search
-                OR hpl.lastname LIKE :search
             )";
         }
 
