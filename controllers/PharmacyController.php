@@ -45,11 +45,11 @@ function loadInventory($pdo)
            WHERE CONDITIONS
         ========================= */
         $where = "WHERE 1=1
-                    AND inv.lotno IS NOT NULL
-                    AND inv.lotno != ''
-                    AND inv.isActive IS NOT NULL
-                    AND inv.isActive != 'N'
-                    AND inv.stock_status IS NOT NULL
+                    -- AND inv.lotno IS NOT NULL
+                    -- AND inv.lotno != ''
+                    -- AND inv.isActive IS NOT NULL
+                    -- AND inv.isActive != 'N'
+                    -- AND inv.stock_status IS NOT NULL
                 ";
         $params = [];
 
