@@ -30,6 +30,11 @@ $activeAdmission = in_array($currentPage, ['admissionLog', 'viewAdmissionLog']);
 $activeER = in_array($currentPage, ['erLog', 'viewERLog']);
 $activeOPD = in_array($currentPage, ['opdLog', 'viewOPDLog']);
 $viewDashboard = ($currentPage == 'viewDashboard');
+
+$zbbPages = ['viewZBBLog', 'viewZBBDashboard'];
+$isZBBOpen = in_array($currentPage, $zbbPages);
+$viewZBBLog = ($currentPage == 'viewZBBLog');
+$viewZBBDashboard = ($currentPage == 'viewZBBDashboard');
 ?>
 
 <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar">
@@ -260,6 +265,33 @@ $viewDashboard = ($currentPage == 'viewDashboard');
                             <a class="nav-link text-white <?= $activeOPD ? 'active' : '' ?>"
                                 href="index.php?page=opdLog">
                                 <i class="fa-solid fa-user-md"></i> Out-Patient Log
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
+            <!-- ZBB -->
+            <li class="nav-item">
+                <a class="nav-link text-white d-flex justify-content-between align-items-center"
+                    data-bs-toggle="collapse"
+                    href="#zbbSubmenu"
+                    aria-expanded="<?= $isZBBOpen ? 'true' : 'false' ?>">
+                    <span>ZBB</span>
+                    <i class="bi bi-chevron-down small"></i>
+                </a>
+                <div class="collapse ps-3 <?= $isZBBOpen ? 'show' : '' ?>" id="zbbSubmenu">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link text-white <?= $viewZBBDashboard ? 'active' : '' ?>"
+                                href="index.php?page=viewZBBDashboard">
+                                ZBB Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white <?= $viewZBBLog ? 'active' : '' ?>"
+                                href="index.php?page=viewZBBLog">
+                                ZBB Log
                             </a>
                         </li>
                     </ul>
